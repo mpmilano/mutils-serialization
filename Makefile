@@ -7,7 +7,7 @@ SOURCES = SerializationSupport.cpp
 HEADERS = SerializationMacros.hpp SerializationSupport.hpp
 OBJECTS=$(SOURCES:.cpp=.o)
 
-TARGET=mutils-serialization.so
+TARGET=libmutils-serialization.so
 
 all: $(TARGET)
 
@@ -15,5 +15,7 @@ clean:
 	rm -f $(OBJECTS) $(TARGET)
 
 $(TARGET) : $(OBJECTS)
-	$(CXX) $(CFLAGS) $(OBJECTS) -o $@ $(LDFLAGS)
+	$(CXX) $(CPPFLAGS) $(OBJECTS) -o $@ $(LDFLAGS)
 
+demo : $(TARGET)
+	$(CXX) $(CPPFLAGS) -L`pwd` -Wl,-rpath=`pwd` serialization-demo.cpp -lmutils-serialization
