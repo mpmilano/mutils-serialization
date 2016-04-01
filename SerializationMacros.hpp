@@ -1,4 +1,9 @@
 #pragma once
+
+/**
+ * Hi! SKIP down to where you see the next comment.
+ */
+
 #define DEFAULT_SERIALIZE2(a,b) int to_bytes(char* ret) const {	\
 		int sa = mutils::to_bytes(a,ret);						\
 		return sa + mutils::to_bytes(b,ret + sa);				\
@@ -55,8 +60,23 @@
 #define DEFAULT_DESERIALIZE(...) DEFAULT_DESERIALIZE_IMPL(VA_NARGS(__VA_ARGS__), __VA_ARGS__)
 
 
-#define DEFAULT_SERIALIZATION_SUPPORT(a,b...)		\
-        DEFAULT_SERIALIZE(b) DEFAULT_DESERIALIZE(a,b)   \
+/**
+ * THIS (below) is the only user-facing macro in this file.
+ * It's for automatically generating basic serialization support.
+ * plop this macro inside the body of a class which extends 
+ * ByteRepresentable, providing the name of the class (that you plopped this into)
+ * as the first argument and the name of the class's fields as the remaining arguments.
+ * Right now we only support up to two fields; adding more support is easy, just ask if
+ * you need.
+ *
+ * MAJOR CAVEAT: This macro assumes that there is a constructor
+ * which takes all the class members (in the order listed). 
+ * it's fine if this is a private constructor, but it needs to exist.
+ * 
+ */
+
+#define DEFAULT_SERIALIZATION_SUPPORT(CLASS_NAME,CLASS_MEMBERS...)		\
+        DEFAULT_SERIALIZE(CLASS_MEMBERS) DEFAULT_DESERIALIZE(CLASS_NAME,CLASS_MEMBERS)   \
     void ensure_registered(mutils::DeserializationManager&){}
 
 
