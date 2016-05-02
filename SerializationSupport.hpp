@@ -313,13 +313,7 @@ namespace mutils{
 		}
 		return size;
 	}
-
-	template<typename>
-	struct is_set : std::false_type {};
-
-	template<typename T>
-	struct is_set<std::set<T> > : std::true_type {};
-
+	
 	template<typename>
 	struct is_pair : std::false_type {};
 
