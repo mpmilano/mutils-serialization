@@ -252,6 +252,11 @@ namespace mutils{
 			return accum + sizeof(int);
 		}
 	}
+	
+	template<typename T>
+	void ensure_registered(const std::vector<T>& v, DeserializationManager& dm){
+		for (auto &e : v) ensure_registered(e,dm);
+	}
 
 
 	template<typename T, restrict(std::is_pod<T>::value)>
@@ -276,6 +281,12 @@ namespace mutils{
 	template<typename T, typename V>
 	int bytes_size (const std::pair<T,V> &pair){
 		return bytes_size(pair.first) + bytes_size(pair.second);
+	}
+
+	template<typename L, typename R>
+	void ensure_registered(const std::pair<L,R>& v, DeserializationManager& dm){
+		ensure_registered(v.first,dm);
+		ensure_registered(v.second,dm);
 	}
 
 	template<typename T>
@@ -312,6 +323,11 @@ namespace mutils{
 			size += bytes_size(a);
 		}
 		return size;
+	}
+
+	template<typename T>
+	void ensure_registered(const std::set<T>& v, DeserializationManager& dm){
+		for (auto &e : v) ensure_registered(e,dm);
 	}
 	
 	template<typename>
