@@ -213,6 +213,36 @@ namespace mutils{
 	std::enable_if_t<std::is_pod<T>::value
 					 ,std::unique_ptr<std::decay_t<T> > > from_bytes(DeserializationManager*, char const *v);
 
+	/** 
+	 * The "marshalled" type is a wrapper for already-serialized types; 
+	 */
+
+	struct marshalled : public ByteRepresentable{
+		const std::size_t size;
+		char const * const data;
+
+		marshalled(decltype(size) size, decltype(data) data)
+			:size(size),data(data){}
+
+		int to_bytes(char* v) const {
+			std::memcpy(v,data,size);
+			return size;
+		}
+		int bytes_size() const {
+			return size;
+		}
+		void ensure_registered(DeserializationManager&){}
+
+		template<typename DSM>
+		static std::unique_ptr<marshalled>
+		from_bytes(DSM const * const, char const * const){
+			static_assert(std::is_same<DSM,void>::value &&
+						  !std::is_same<DSM,void>::value,
+						  "Do not deserialize into a marshalled. please."
+				);
+		}
+	};
+
 	/**
 	 * Serialization is also implemented for the following STL types:
 	 * vector
