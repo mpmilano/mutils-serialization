@@ -29,7 +29,7 @@ namespace mutils{
 		 * NOTE: it is recommended that users not call this directly, and prefer
 		 * to use mutils::to_bytes(T,v) instead.
 		 */
-		virtual int to_bytes(char* v) const = 0;
+		virtual std::size_t to_bytes(char* v) const = 0;
 
 		/**
 		 * the size of the marshalled representation of this object. 
@@ -38,7 +38,7 @@ namespace mutils{
 		 * NOTE: it is recommended that users not call this directly, and prefer
 		 * to use mutils::bytes_size(T,v) instead.
 		 */
-		virtual int bytes_size() const = 0;
+		virtual std::size_t bytes_size() const = 0;
 
 		/**
 		 * If this object requires context in order to correctly 
@@ -173,25 +173,25 @@ namespace mutils{
 	 * gets GCC5.0 or better, this will also work if
 	 * b is trivially copyable.
 	 */
-	int to_bytes(const ByteRepresentable& b, char* v);
+	std::size_t to_bytes(const ByteRepresentable& b, char* v);
 
 	/**
 	 * calls b.bytes_size() when b is a ByteRepresentable;
 	 * calls sizeof(decay_t<decltype(b)>) when b is a POD;
 	 * custom logic is implemented for some STL types.
 	 */
-	int bytes_size(const ByteRepresentable& b);
+	std::size_t bytes_size(const ByteRepresentable& b);
 
 	/**
 	 * extracts the C string (char*) equivalent to this 
 	 * std::string and stores it in v
 	 */
-	int to_bytes(const std::string& b, char* v);
+	std::size_t to_bytes(const std::string& b, char* v);
 
 	/**
 	 * effectively strlen().
 	 */
-	int bytes_size(const std::string& b);
+	std::size_t bytes_size(const std::string& b);
 
 	/**
 	 * Calls T::from_bytes(ctx,v) when T is a ByteRepresentable. 
@@ -224,11 +224,11 @@ namespace mutils{
 		marshalled(decltype(size) size, decltype(data) data)
 			:size(size),data(data){}
 
-		int to_bytes(char* v) const {
+		std::size_t to_bytes(char* v) const {
 			std::memcpy(v,data,size);
 			return size;
 		}
-		int bytes_size() const {
+		std::size_t bytes_size() const {
 			return size;
 		}
 		void ensure_registered(DeserializationManager&){}
@@ -254,17 +254,29 @@ namespace mutils{
 	//end forward-declaring; everything past this point is implementation,
 	//and not essential to understanding  the interface.
 
+	template<typename T, restrict(std::is_pod<T>::value)>
+	auto to_bytes(const T &t, char* v){
+		auto res = std::memcpy(v,&t,sizeof(T));
+		assert(res);
+		return sizeof(T);
+	}
+
+	template<typename T, restrict2(std::is_pod<T>::value)>
+	auto bytes_size(const T&){
+		return sizeof(T);
+	}
+	
 	template<typename T>
-	int to_bytes(const std::vector<T> &vec, char* _v){
+	std::size_t to_bytes(const std::vector<T> &vec, char* _v){
 		((int*)_v)[0] = vec.size();
 		char* v = _v + sizeof(int);
 		if (std::is_pod<T>::value){
-			int size = vec.size() * bytes_size(vec.back());
+			std::size_t size = vec.size() * bytes_size(vec.back());
 			memcpy(v, vec.data(),size);
 			return size + sizeof(int);
 		}
 		else{
-			int offset = 0;
+			unsigned int offset = 0;
 			for (auto &e : vec){
 				offset += (to_bytes(e,v + offset));
 			}
@@ -273,7 +285,7 @@ namespace mutils{
 	}
 
 	template<typename T>
-	int bytes_size (const std::vector<T> &v){
+	std::size_t bytes_size (const std::vector<T> &v){
 		if (std::is_pod<T>::value)
 			return v.size() * bytes_size(v.back()) + sizeof(int);
 		else {
@@ -286,30 +298,16 @@ namespace mutils{
 	template<typename T>
 	void ensure_registered(const std::vector<T>& v, DeserializationManager& dm){
 		for (auto &e : v) ensure_registered(e,dm);
-	}
-
-
-	template<typename T, restrict(std::is_pod<T>::value)>
-	int to_bytes(const T &t, char* v){
-		auto res = std::memcpy(v,&t,sizeof(T));
-		assert(res);
-		return sizeof(T);
-	}
-
-	template<typename T, restrict2(std::is_pod<T>::value)>
-	auto bytes_size(const T&){
-		return sizeof(T);
-	}
-	
+	}	
 	template<typename T, typename V>
-	int to_bytes(const std::pair<T,V> &pair, char* v){
+	std::size_t to_bytes(const std::pair<T,V> &pair, char* v){
 		auto offset = to_bytes(pair.first,v);
 		auto offset2 = to_bytes(pair.second,v + offset);
 		return offset + offset2;
 	}
 
 	template<typename T, typename V>
-	int bytes_size (const std::pair<T,V> &pair){
+	std::size_t bytes_size (const std::pair<T,V> &pair){
 		return bytes_size(pair.first) + bytes_size(pair.second);
 	}
 
@@ -337,7 +335,7 @@ namespace mutils{
 	}
 
 	template<typename T>
-	int to_bytes(const std::set<T>& s, char* _v){
+	std::size_t to_bytes(const std::set<T>& s, char* _v){
 		((int*)_v)[0] = s.size();
 		char *v = _v + sizeof(int);
 		for (auto &a : s){
@@ -347,7 +345,7 @@ namespace mutils{
 	}
 
 	template<typename T>
-	int bytes_size(const std::set<T>& s){
+	std::size_t bytes_size(const std::set<T>& s){
 		int size = sizeof(int);
 		for (auto &a : s) {
 			size += bytes_size(a);

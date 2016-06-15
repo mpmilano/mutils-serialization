@@ -30,7 +30,7 @@
 #define DEFAULT_SERIALIZE4(a,b,c,d) int to_bytes(char* ret) const {		\
 		int sa = mutils::to_bytes(a,ret);								\
 		int sb = mutils::to_bytes(b,ret + sa);							\
-		int sc = mutils::to_bytes(b,ret + sa + sb);						\
+		int sc = mutils::to_bytes(c,ret + sa + sb);						\
 		return sa + sb + sc + mutils::to_bytes(d,ret + sa + sb + sc);	\
 	}																	\
 	int bytes_size() const {											\
@@ -40,8 +40,8 @@
 #define DEFAULT_SERIALIZE5(a,b,c,d,e) int to_bytes(char* ret) const {	\
 		int sa = mutils::to_bytes(a,ret);								\
 		int sb = mutils::to_bytes(b,ret + sa);							\
-		int sc = mutils::to_bytes(b,ret + sa + sb);						\
-		int sd = mutils::to_bytes(b,ret + sa + sb + sc);				\
+		int sc = mutils::to_bytes(c,ret + sa + sb);						\
+		int sd = mutils::to_bytes(d,ret + sa + sb + sc);				\
 		return sa + sb + sc + + sd + mutils::to_bytes(d,ret + sa + sb + sc + sd); \
 	}																	\
 	int bytes_size() const {											\
