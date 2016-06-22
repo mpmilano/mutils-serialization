@@ -84,7 +84,7 @@
 	std::size_t bytes_size() const {											\
 		return mutils::bytes_size(a) + mutils::bytes_size(b) + mutils::bytes_size(c) + mutils::bytes_size(d) + mutils::bytes_size(e) + mutils::bytes_size(f); \
 	}																	\
-	void post_object(const std::function<void (char const * const)>&fun ) const { \
+	void post_object(const std::function<void (char const * const, std::size_t)>&fun ) const { \
 		mutils::post_object(fun,a);									\
 		mutils::post_object(fun,b);									\
 		mutils::post_object(fun,c);									\
@@ -105,7 +105,7 @@
 	std::size_t bytes_size() const {											\
 		return mutils::bytes_size(a) + mutils::bytes_size(b) + mutils::bytes_size(c) + mutils::bytes_size(d) + mutils::bytes_size(e) + mutils::bytes_size(f) + mutils::bytes_size(g); \
 	}																	\
-	void post_object(const std::function<void (char const * const)>&fun ) const { \
+	void post_object(const std::function<void (char const * const, std::size_t)>&fun ) const { \
 		mutils::post_object(fun,a);						\
 		mutils::post_object(fun,b);						\
 		mutils::post_object(fun,c);						\
