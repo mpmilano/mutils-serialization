@@ -39,7 +39,7 @@ namespace mutils{
 		 * NOTE: it is recommended that users not call this directly, and prefer
 		 * to use mutils::post_object(f,T) instead.
 		 */
-		virtual void post_object(const std::function<void (char const * const)>&) const = 0;
+		virtual void post_object(const std::function<void (char const * const,std::size_t)>&) const = 0;
 
 		/**
 		 * the size of the marshalled representation of this object. 
@@ -171,18 +171,15 @@ namespace mutils{
 	template<typename T, typename BR>
 	std::enable_if_t<std::is_pod<BR>::value>
 	post_object(const std::function<void (char const * const, std::size_t)>& f, const BR &br){
-		f((char*)br);
+		f((char*)br,sizeof(BR));
 	}
 	
-	template<typename T>
-	void post_object(const std::function<void (char const * const, std::size_t)>& f, const ByteRepresentable &br){
-		br.post_object(f);
-	}
+	void post_object(const std::function<void (char const * const, std::size_t)>& f, const ByteRepresentable &br);
 
 	template<typename T>
-	void post_object(const std::function<void (char const * const, std::size_t)>& f, const std::vector<T>& v){
+	void post_object(const std::function<void (char const * const, std::size_t)>& f, const std::vector<T>& vec){
 		int size = vec.size();
-		f(&size,sizeof(size));
+		f((char*)&size,sizeof(size));
 		if (std::is_pod<T>::value){
 			std::size_t size = vec.size() * bytes_size(vec.back());
 			f(vec.data(),size);
@@ -194,32 +191,18 @@ namespace mutils{
 		}
 	}
 
-	template<typename T>
-	void post_object(const std::function<void (char const * const, std::size_t)>& f, const std::vector<T>& v){
-		int size = vec.size();
-		f(&size,sizeof(size));
-		if (std::is_pod<T>::value){
-			std::size_t size = vec.size() * bytes_size(vec.back());
-			f(vec.data(),size);
-		}
-		else{
-			for (auto &e : vec){
-				post_object(f,e);
-			}
-		}
-	}
 	
 	template<typename T>
-	void post_object(const std::function<void (char const * const, std::size_t)>& f, const std::set<T>& v){
+	void post_object(const std::function<void (char const * const, std::size_t)>& f, const std::set<T>& s){
 		int size = s.size();
-		f(&size,sizeof(size));
+		f((char*)&size,sizeof(size));
 		for (auto &a : s){
 			post_object(f,a);
 		}
 	}
 
 	template<typename T, typename V>
-	void post_object(const std::function<void (char const * const, std::size_t)>& f, const std::pair<T,V>& v){
+	void post_object(const std::function<void (char const * const, std::size_t)>& f, const std::pair<T,V>& pair){
 		post_object(f,pair.first);
 		post_object(f,pair.second);
 	}
@@ -326,12 +309,7 @@ namespace mutils{
 	//end forward-declaring; everything past this point is implementation,
 	//and not essential to understanding  the interface.
 
-	auto post_to_buffer(std::size_t &index, char * _v){
-		return [&index,_v](char const * const v, std::size_t size){
-			memcpy(_v + index, v, size);
-			index += size;
-		};
-	}
+	std::function<void (char const * const, std::size_t)> post_to_buffer(std::size_t &index, char * _v);
 
 	template<typename T, restrict(std::is_pod<T>::value)>
 	auto to_bytes(const T &t, char* v){

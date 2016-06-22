@@ -25,4 +25,15 @@ namespace mutils {
 		b.ensure_registered(dm);
 	}
 
+	std::function<void (char const * const, std::size_t)> post_to_buffer(std::size_t &index, char * _v){
+		return [&index,_v](char const * const v, std::size_t size){
+			memcpy(_v + index, v, size);
+			index += size;
+		};
+	}
+
+	void post_object(const std::function<void (char const * const, std::size_t)>& f, const ByteRepresentable &br){
+		br.post_object(f);
+	}
+
 }
