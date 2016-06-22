@@ -179,7 +179,7 @@ namespace mutils{
 	template<typename T, typename BR>
 	std::enable_if_t<std::is_pod<BR>::value>
 	post_object(const std::function<void (char const * const, std::size_t)>& f, const BR &br){
-		f((char*)br,sizeof(BR));
+		f((char*)&br,sizeof(BR));
 	}
 	
 	void post_object(const std::function<void (char const * const, std::size_t)>& f, const ByteRepresentable &br);
