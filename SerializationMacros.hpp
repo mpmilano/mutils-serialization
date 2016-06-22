@@ -10,6 +10,9 @@
 	}															\
 	int bytes_size() const {									\
 		return mutils::bytes_size(a);							\
+	}															\
+	void post_object(const std::function<void (char const * const)>&f ) const { \
+		mutils::post_object(f,a);										\
 	}
 #define DEFAULT_SERIALIZE2(a,b) int to_bytes(char* ret) const {	\
 		int sa = mutils::to_bytes(a,ret);						\
@@ -17,6 +20,10 @@
 	}															\
 	int bytes_size() const {									\
 		return mutils::bytes_size(a) + mutils::bytes_size(b);	\
+	}																	\
+	void post_object(const std::function<void (char const * const)>&f ) const { \
+		mutils::post_object(f,a);										\
+		mutils::post_object(f,b);										\
 	}
 #define DEFAULT_SERIALIZE3(a,b,c) int to_bytes(char* ret) const {		\
 		int sa = mutils::to_bytes(a,ret);								\
@@ -25,6 +32,11 @@
 	}																	\
 	int bytes_size() const {											\
 		return mutils::bytes_size(a) + mutils::bytes_size(b) + mutils::bytes_size(c); \
+	}																	\
+	void post_object(const std::function<void (char const * const)>&f ) const { \
+		mutils::post_object(f,a);										\
+		mutils::post_object(f,b);										\
+		mutils::post_object(f,c);										\
 	}
 
 #define DEFAULT_SERIALIZE4(a,b,c,d) int to_bytes(char* ret) const {		\
@@ -35,6 +47,12 @@
 	}																	\
 	int bytes_size() const {											\
 		return mutils::bytes_size(a) + mutils::bytes_size(b) + mutils::bytes_size(c) + mutils::bytes_size(d); \
+	}																	\
+	void post_object(const std::function<void (char const * const)>&f ) const { \
+		mutils::post_object(f,a);										\
+		mutils::post_object(f,b);										\
+		mutils::post_object(f,c);										\
+		mutils::post_object(f,d);										\
 	}
 
 #define DEFAULT_SERIALIZE5(a,b,c,d,e) int to_bytes(char* ret) const {	\
@@ -46,6 +64,13 @@
 	}																	\
 	int bytes_size() const {											\
 		return mutils::bytes_size(a) + mutils::bytes_size(b) + mutils::bytes_size(c) + mutils::bytes_size(d) + mutils::bytes_size(e); \
+	}																	\
+	void post_object(const std::function<void (char const * const)>&f ) const { \
+		mutils::post_object(f,a);										\
+		mutils::post_object(f,b);										\
+		mutils::post_object(f,c);										\
+		mutils::post_object(f,d);										\
+		mutils::post_object(f,e);										\
 	}
 
 #define DEFAULT_SERIALIZE6(a,b,c,d,e,f) int to_bytes(char* ret) const {	\
@@ -58,6 +83,14 @@
 	}																	\
 	int bytes_size() const {											\
 		return mutils::bytes_size(a) + mutils::bytes_size(b) + mutils::bytes_size(c) + mutils::bytes_size(d) + mutils::bytes_size(e) + mutils::bytes_size(f); \
+	}																	\
+	void post_object(const std::function<void (char const * const)>&fun ) const { \
+		mutils::post_object(fun,a);										\
+		mutils::post_object(fun,b);										\
+		mutils::post_object(fun,c);										\
+		mutils::post_object(fun,d);										\
+		mutils::post_object(fun,e);										\
+		mutils::post_object(fun,f);										\
 	}
 
 #define DEFAULT_SERIALIZE7(a,b,c,d,e,f,g) int to_bytes(char* ret) const { \
@@ -71,6 +104,15 @@
 	}																	\
 	int bytes_size() const {											\
 		return mutils::bytes_size(a) + mutils::bytes_size(b) + mutils::bytes_size(c) + mutils::bytes_size(d) + mutils::bytes_size(e) + mutils::bytes_size(f) + mutils::bytes_size(g); \
+	}																	\
+	void post_object(const std::function<void (char const * const)>&fun ) const { \
+		mutils::post_object(fun,a);										\
+		mutils::post_object(fun,b);										\
+		mutils::post_object(fun,c);										\
+		mutils::post_object(fun,d);										\
+		mutils::post_object(fun,e);										\
+		mutils::post_object(fun,f);										\
+		mutils::post_object(fun,g);										\
 	}
 
 //DESERIALIZERS

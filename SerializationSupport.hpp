@@ -32,6 +32,16 @@ namespace mutils{
 		virtual std::size_t to_bytes(char* v) const = 0;
 
 		/**
+		 * Pass a pointer to a buffer containing this class's marshalled representation 
+		 * into the function f.  This pointer is not guaranteed to live beyond the duration
+		 * of the call to f, so make a copy if you need to keep it around.
+		 *
+		 * NOTE: it is recommended that users not call this directly, and prefer
+		 * to use mutils::post_object(f,T) instead.
+		 */
+		virtual void post_object(const std::function<void (char const * const)>&) const = 0;
+
+		/**
 		 * the size of the marshalled representation of this object. 
 		 * useful when allocating arrays in which to store this object.
 		 *
@@ -152,6 +162,68 @@ namespace mutils{
 		}
 	};
 
+	/**
+	 * In-place serialization is also sometimes possible.
+	 * This will take a function that expects buffers to be posted,
+	 * and will post the object (potentially in multiple buffers) 
+	 * via repeated calls to the function
+	 */
+	template<typename T, typename BR>
+	std::enable_if_t<std::is_pod<BR>::value>
+	post_object(const std::function<void (char const * const, std::size_t)>& f, const BR &br){
+		f((char*)br);
+	}
+	
+	template<typename T>
+	void post_object(const std::function<void (char const * const, std::size_t)>& f, const ByteRepresentable &br){
+		br.post_object(f);
+	}
+
+	template<typename T>
+	void post_object(const std::function<void (char const * const, std::size_t)>& f, const std::vector<T>& v){
+		int size = vec.size();
+		f(&size,sizeof(size));
+		if (std::is_pod<T>::value){
+			std::size_t size = vec.size() * bytes_size(vec.back());
+			f(vec.data(),size);
+		}
+		else{
+			for (auto &e : vec){
+				post_object(f,e);
+			}
+		}
+	}
+
+	template<typename T>
+	void post_object(const std::function<void (char const * const, std::size_t)>& f, const std::vector<T>& v){
+		int size = vec.size();
+		f(&size,sizeof(size));
+		if (std::is_pod<T>::value){
+			std::size_t size = vec.size() * bytes_size(vec.back());
+			f(vec.data(),size);
+		}
+		else{
+			for (auto &e : vec){
+				post_object(f,e);
+			}
+		}
+	}
+	
+	template<typename T>
+	void post_object(const std::function<void (char const * const, std::size_t)>& f, const std::set<T>& v){
+		int size = s.size();
+		f(&size,sizeof(size));
+		for (auto &a : s){
+			post_object(f,a);
+		}
+	}
+
+	template<typename T, typename V>
+	void post_object(const std::function<void (char const * const, std::size_t)>& f, const std::pair<T,V>& v){
+		post_object(f,pair.first);
+		post_object(f,pair.second);
+	}
+
 
 	/**
 	 * Calls b.ensure_registered(dm) when b is a ByteRepresentable;
@@ -254,6 +326,13 @@ namespace mutils{
 	//end forward-declaring; everything past this point is implementation,
 	//and not essential to understanding  the interface.
 
+	auto post_to_buffer(std::size_t &index, char * _v){
+		return [&index,_v](char const * const v, std::size_t size){
+			memcpy(_v + index, v, size);
+			index += size;
+		};
+	}
+
 	template<typename T, restrict(std::is_pod<T>::value)>
 	auto to_bytes(const T &t, char* v){
 		auto res = std::memcpy(v,&t,sizeof(T));
@@ -267,21 +346,12 @@ namespace mutils{
 	}
 	
 	template<typename T>
-	std::size_t to_bytes(const std::vector<T> &vec, char* _v){
-		((int*)_v)[0] = vec.size();
-		char* v = _v + sizeof(int);
-		if (std::is_pod<T>::value){
-			std::size_t size = vec.size() * bytes_size(vec.back());
-			memcpy(v, vec.data(),size);
-			return size + sizeof(int);
-		}
-		else{
-			unsigned int offset = 0;
-			for (auto &e : vec){
-				offset += (to_bytes(e,v + offset));
-			}
-			return offset + sizeof(int);
-		}
+	std::size_t to_bytes(const std::vector<T> &vec, char* v){
+		auto size = bytes_size(vec);
+		std::size_t index = 0;
+		post_object(post_to_buffer(index,v), vec);
+		return size;
+
 	}
 
 	template<typename T>
@@ -301,9 +371,10 @@ namespace mutils{
 	}	
 	template<typename T, typename V>
 	std::size_t to_bytes(const std::pair<T,V> &pair, char* v){
-		auto offset = to_bytes(pair.first,v);
-		auto offset2 = to_bytes(pair.second,v + offset);
-		return offset + offset2;
+		std::size_t index{0};
+		post_to_buffer(index,pair.first);
+		post_to_buffer(index,pair.second);
+		return bytes_size(pair);
 	}
 
 	template<typename T, typename V>
@@ -336,12 +407,11 @@ namespace mutils{
 
 	template<typename T>
 	std::size_t to_bytes(const std::set<T>& s, char* _v){
-		((int*)_v)[0] = s.size();
-		char *v = _v + sizeof(int);
-		for (auto &a : s){
-			v += to_bytes(a,v);
-		}
-		return _v - v;
+		std::size_t index{0};
+		auto size = bytes_size(s);
+		post_object(post_to_buffer(index,_v),s);
+		return size;
+
 	}
 
 	template<typename T>
