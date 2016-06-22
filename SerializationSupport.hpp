@@ -171,6 +171,51 @@ namespace mutils{
 	}
 
 	/**
+	 * calls b.bytes_size() when b is a ByteRepresentable;
+	 * calls sizeof(decay_t<decltype(b)>) when b is a POD;
+	 * custom logic is implemented for some STL types.
+	 */
+	std::size_t bytes_size(const ByteRepresentable& b);
+
+	/**
+	 * effectively strlen().
+	 */
+	std::size_t bytes_size(const std::string& b);
+
+	/**
+	 * all of the elements of this vector, plus one int
+	 * for the number of elements.
+	 */
+	template<typename T>
+	std::size_t bytes_size (const std::vector<T> &v){
+		if (std::is_pod<T>::value)
+			return v.size() * bytes_size(v.back()) + sizeof(int);
+		else {
+			int accum = 0;
+			for (auto &e : v) accum += bytes_size(e);
+			return accum + sizeof(int);
+		}
+	}
+
+	/**
+	 * sums the size of both pair elements
+	 */
+	template<typename T, typename V>
+	std::size_t bytes_size (const std::pair<T,V> &pair){
+		return bytes_size(pair.first) + bytes_size(pair.second);
+	}
+
+	template<typename T>
+	std::size_t bytes_size(const std::set<T>& s){
+		int size = sizeof(int);
+		for (auto &a : s) {
+			size += bytes_size(a);
+		}
+		return size;
+	}
+
+
+	/**
 	 * In-place serialization is also sometimes possible.
 	 * This will take a function that expects buffers to be posted,
 	 * and will post the object (potentially in multiple buffers) 
@@ -239,22 +284,10 @@ namespace mutils{
 	std::size_t to_bytes(const ByteRepresentable& b, char* v);
 
 	/**
-	 * calls b.bytes_size() when b is a ByteRepresentable;
-	 * calls sizeof(decay_t<decltype(b)>) when b is a POD;
-	 * custom logic is implemented for some STL types.
-	 */
-	std::size_t bytes_size(const ByteRepresentable& b);
-
-	/**
 	 * extracts the C string (char*) equivalent to this 
 	 * std::string and stores it in v
 	 */
 	std::size_t to_bytes(const std::string& b, char* v);
-
-	/**
-	 * effectively strlen().
-	 */
-	std::size_t bytes_size(const std::string& b);
 
 	/**
 	 * Calls T::from_bytes(ctx,v) when T is a ByteRepresentable. 
@@ -336,17 +369,6 @@ namespace mutils{
 	}
 
 	template<typename T>
-	std::size_t bytes_size (const std::vector<T> &v){
-		if (std::is_pod<T>::value)
-			return v.size() * bytes_size(v.back()) + sizeof(int);
-		else {
-			int accum = 0;
-			for (auto &e : v) accum += bytes_size(e);
-			return accum + sizeof(int);
-		}
-	}
-	
-	template<typename T>
 	void ensure_registered(const std::vector<T>& v, DeserializationManager& dm){
 		for (auto &e : v) ensure_registered(e,dm);
 	}	
@@ -356,11 +378,6 @@ namespace mutils{
 		post_to_buffer(index,pair.first);
 		post_to_buffer(index,pair.second);
 		return bytes_size(pair);
-	}
-
-	template<typename T, typename V>
-	std::size_t bytes_size (const std::pair<T,V> &pair){
-		return bytes_size(pair.first) + bytes_size(pair.second);
 	}
 
 	template<typename L, typename R>
@@ -393,15 +410,6 @@ namespace mutils{
 		post_object(post_to_buffer(index,_v),s);
 		return size;
 
-	}
-
-	template<typename T>
-	std::size_t bytes_size(const std::set<T>& s){
-		int size = sizeof(int);
-		for (auto &a : s) {
-			size += bytes_size(a);
-		}
-		return size;
 	}
 
 	template<typename T>

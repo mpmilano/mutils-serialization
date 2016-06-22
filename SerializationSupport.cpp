@@ -36,4 +36,7 @@ namespace mutils {
 		br.post_object(f);
 	}
 
+	void post_object(const std::function<void (char const * const, std::size_t)>& f, const std::string& str) {
+		f(str.c_str(), str.length());
+	}
 }
