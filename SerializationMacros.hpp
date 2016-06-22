@@ -167,6 +167,7 @@
 		auto c2 = mutils::from_bytes<std::decay_t<decltype(c)> >(p,v + size_a2 + size_b2); \
 		auto size_c2 = mutils::bytes_size(*c2);							\
 		auto d2 = mutils::from_bytes<std::decay_t<decltype(d)> >(p,v + size_a2 + size_b2 + size_c2); \
+		auto size_d2 = mutils::bytes_size(*d2);							\
 		auto e2 = mutils::from_bytes<std::decay_t<decltype(e)> >(p,v + size_a2 + size_b2 + size_c2 + size_d2); \
 		Name r{*a2,*b2,*c2,*d2,*e2,*(mutils::from_bytes<std::decay_t<decltype(f)> >(p,v + size_a2 + size_b2 + size_c2 + size_d2 + mutils::bytes_size(*e2)))}; \
 		return mutils::heap_copy(r);									\
@@ -181,7 +182,9 @@
 		auto c2 = mutils::from_bytes<std::decay_t<decltype(c)> >(p,v + size_a2 + size_b2); \
 		auto size_c2 = mutils::bytes_size(*c2);							\
 		auto d2 = mutils::from_bytes<std::decay_t<decltype(d)> >(p,v + size_a2 + size_b2 + size_c2); \
+		auto size_d2 = mutils::bytes_size(*d2);							\
 		auto e2 = mutils::from_bytes<std::decay_t<decltype(e)> >(p,v + size_a2 + size_b2 + size_c2 + size_d2); \
+		auto size_e2 = mutils::bytes_size(*e2);							\
 		auto f2 = mutils::from_bytes<std::decay_t<decltype(f)> >(p,v + size_a2 + size_b2 + size_c2 + size_d2 + size_e2); \
 		Name r{*a2,*b2,*c2,*d2,*e2,*f2,*(mutils::from_bytes<std::decay_t<decltype(g)> >(p,v + size_a2 + size_b2 + size_c2 + size_d2 + size_e2 + mutils::bytes_size(*f2)))}; \
 		return mutils::heap_copy(r);									\

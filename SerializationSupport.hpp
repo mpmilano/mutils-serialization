@@ -163,6 +163,14 @@ namespace mutils{
 	};
 
 	/**
+	 * Just calls sizeof(T)
+	 */
+	template<typename T, restrict2(std::is_pod<T>::value)>
+	auto bytes_size(const T&){
+		return sizeof(T);
+	}
+
+	/**
 	 * In-place serialization is also sometimes possible.
 	 * This will take a function that expects buffers to be posted,
 	 * and will post the object (potentially in multiple buffers) 
@@ -318,11 +326,6 @@ namespace mutils{
 		return sizeof(T);
 	}
 
-	template<typename T, restrict2(std::is_pod<T>::value)>
-	auto bytes_size(const T&){
-		return sizeof(T);
-	}
-	
 	template<typename T>
 	std::size_t to_bytes(const std::vector<T> &vec, char* v){
 		auto size = bytes_size(vec);
