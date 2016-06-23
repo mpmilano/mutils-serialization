@@ -131,7 +131,7 @@
 		auto a2 = mutils::from_bytes<std::decay_t<decltype(a)> >(p,v);	\
 		auto size_a2 = mutils::bytes_size(*a2);							\
 		auto b2 = mutils::from_bytes<std::decay_t<decltype(b)> >(p,v + size_a2); \
-		return make_unique<Name>(*a2,*b2,*(mutils::from_bytes<std::decay_t<decltype(c)> >(p,v + size_a2 + mutils::bytes_size(*b2)))); \
+		return std::make_unique<Name>(*a2,*b2,*(mutils::from_bytes<std::decay_t<decltype(c)> >(p,v + size_a2 + mutils::bytes_size(*b2)))); \
 	}
 #define DEFAULT_DESERIALIZE5(Name,a,b,c,d)								\
 	static std::unique_ptr<Name> from_bytes(mutils::DeserializationManager* p, char const * v){					\
@@ -140,7 +140,7 @@
 		auto b2 = mutils::from_bytes<std::decay_t<decltype(b)> >(p,v + size_a2); \
 		auto size_b2 = mutils::bytes_size(*b2);							\
 		auto c2 = mutils::from_bytes<std::decay_t<decltype(c)> >(p,v + size_a2 + size_b2); \
-		return make_unique<Name>(*a2,*b2,*c2,*(mutils::from_bytes<std::decay_t<decltype(d)> >(p,v + size_a2 + size_b2 + mutils::bytes_size(*c2)))); \
+		return std::make_unique<Name>(*a2,*b2,*c2,*(mutils::from_bytes<std::decay_t<decltype(d)> >(p,v + size_a2 + size_b2 + mutils::bytes_size(*c2)))); \
 	}
 #define DEFAULT_DESERIALIZE6(Name,a,b,c,d,e)								\
 	static std::unique_ptr<Name> from_bytes(mutils::DeserializationManager* p, char const * v){					\
@@ -151,7 +151,7 @@
 		auto c2 = mutils::from_bytes<std::decay_t<decltype(c)> >(p,v + size_a2 + size_b2); \
 		auto size_c2 = mutils::bytes_size(*c2);							\
 		auto d2 = mutils::from_bytes<std::decay_t<decltype(d)> >(p,v + size_a2 + size_b2 + size_c2); \
-		return make_unique<Name>(*a2,*b2,*c2,*d2,*(mutils::from_bytes<std::decay_t<decltype(e)> >(p,v + size_a2 + size_b2 + size_c2 + mutils::bytes_size(*d2)))); \
+		return std::make_unique<Name>(*a2,*b2,*c2,*d2,*(mutils::from_bytes<std::decay_t<decltype(e)> >(p,v + size_a2 + size_b2 + size_c2 + mutils::bytes_size(*d2)))); \
 	}
 #define DEFAULT_DESERIALIZE7(Name,a,b,c,d,e,f)							\
 	static std::unique_ptr<Name> from_bytes(mutils::DeserializationManager* p, char const * v){					\
@@ -164,7 +164,7 @@
 		auto d2 = mutils::from_bytes<std::decay_t<decltype(d)> >(p,v + size_a2 + size_b2 + size_c2); \
 		auto size_d2 = mutils::bytes_size(*d2);							\
 		auto e2 = mutils::from_bytes<std::decay_t<decltype(e)> >(p,v + size_a2 + size_b2 + size_c2 + size_d2); \
-		return make_unique<Name>(*a2,*b2,*c2,*d2,*e2,*(mutils::from_bytes<std::decay_t<decltype(f)> >(p,v + size_a2 + size_b2 + size_c2 + size_d2 + mutils::bytes_size(*e2)))); \
+		return std::make_unique<Name>(*a2,*b2,*c2,*d2,*e2,*(mutils::from_bytes<std::decay_t<decltype(f)> >(p,v + size_a2 + size_b2 + size_c2 + size_d2 + mutils::bytes_size(*e2)))); \
 	}
 
 #define DEFAULT_DESERIALIZE8(Name,a,b,c,d,e,f,g)							\
@@ -180,7 +180,7 @@
 		auto e2 = mutils::from_bytes<std::decay_t<decltype(e)> >(p,v + size_a2 + size_b2 + size_c2 + size_d2); \
 		auto size_e2 = mutils::bytes_size(*e2);							\
 		auto f2 = mutils::from_bytes<std::decay_t<decltype(f)> >(p,v + size_a2 + size_b2 + size_c2 + size_d2 + size_e2); \
-		return make_unique<Name>(*a2,*b2,*c2,*d2,*e2,*f2,*(mutils::from_bytes<std::decay_t<decltype(g)> >(p,v + size_a2 + size_b2 + size_c2 + size_d2 + size_e2 + mutils::bytes_size(*f2)))); \
+		return std::make_unique<Name>(*a2,*b2,*c2,*d2,*e2,*f2,*(mutils::from_bytes<std::decay_t<decltype(g)> >(p,v + size_a2 + size_b2 + size_c2 + size_d2 + size_e2 + mutils::bytes_size(*f2)))); \
 	}
 	
 #define DEFAULT_SERIALIZE_IMPL2(count, ...) DEFAULT_SERIALIZE ## count (__VA_ARGS__)
