@@ -222,11 +222,11 @@ namespace mutils{
      */
     template<typename BR>
     std::enable_if_t<std::is_pod<BR>::value>
-    post_object(const std::function<void (char const * const, std::size_t)>& f, const BR &br){
-        f((char*)br,sizeof(BR));
+    post_object(const std::function<void (char const * const, std::size_t)>& f, const BR& br){
+        f((char*)&br,sizeof(BR));
     }
 
-    void post_object(const std::function<void (char const * const, std::size_t)>& f, const ByteRepresentable &br);
+    void post_object(const std::function<void (char const * const, std::size_t)>& f, const ByteRepresentable& br);
 
 	/**
 	 * Calls b.ensure_registered(dm) when b is a ByteRepresentable;
