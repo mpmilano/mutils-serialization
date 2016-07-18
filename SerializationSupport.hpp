@@ -375,7 +375,7 @@ namespace mutils{
 	}
 
 	template<typename T, typename V>
-	std::size_t to_bytes(const std::pair<T,V> &pair, char* v){
+	std::size_t to_bytes(const std::pair<T,V> &pair, char*){
 		std::size_t index{0};
 		post_to_buffer(index,pair.first);
 		post_to_buffer(index,pair.second);
@@ -424,7 +424,7 @@ namespace mutils{
 	}
 
 	template<typename T, typename P>
-	std::unique_ptr<T> from_bytes_stupid(P* p, T* t, char const * v) {
+	std::unique_ptr<T> from_bytes_stupid(P* p, T*, char const * v) {
 		return from_bytes<T>(p,v);
 	}
 
