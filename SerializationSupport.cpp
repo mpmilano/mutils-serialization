@@ -39,4 +39,13 @@ namespace mutils {
 	void post_object(const std::function<void (char const * const, std::size_t)>& f, const std::string& str) {
 		f(str.c_str(), str.length() + 1);
 	}
+
+	std::size_t to_bytes_v(char *){
+		return 0;
+	}
+	
+	std::size_t from_bytes_v(DeserializationManager *, char const * const ){
+		return 0;
+	}
+
 }

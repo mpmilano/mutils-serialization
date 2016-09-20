@@ -502,18 +502,16 @@ namespace mutils{
 	   Also the buffer is at the beginning! This is important.
 	 */
 	
-	std::size_t to_bytes_v(char *){
-		return 0;
-	}
+	std::size_t to_bytes_v(char *);
+	
 	template<typename T, typename... Rest>
 	std::size_t to_bytes_v(char *buf, const T &first, const Rest& ... rest){
 		auto size = to_bytes(first,buf);
 		return size + to_bytes_v(buf + size,rest...);
 	}
 
-	std::size_t from_bytes_v(DeserializationManager *, char const * const ){
-		return 0;
-	}
+	std::size_t from_bytes_v(DeserializationManager *, char const * const );
+	
 	template<typename T, typename... Rest>
 	std::size_t from_bytes_v(DeserializationManager *dsm, char const * const buf, std::unique_ptr<T> &first, Rest& ... rest){
 		first = from_bytes<T>(dsm,buf);
