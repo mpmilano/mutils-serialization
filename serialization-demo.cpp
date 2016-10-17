@@ -17,6 +17,8 @@ struct TestSerialization : public ByteRepresentable{
 int main(){
 	DeserializationManager dsm{{}};
 	{
+		int i = 3;
+		auto size = bytes_size(i);
 		TestSerialization ts{1,1};
 		char *c = (char*) malloc(ts.bytes_size());
 		to_bytes(ts,c);

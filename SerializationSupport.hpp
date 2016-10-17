@@ -449,8 +449,8 @@ namespace mutils{
 		return std::make_unique<T>(v);
 	}
 	
-	template<typename T, typename P>
-	std::unique_ptr<type_check<is_set,T> > from_bytes(P* ctx, char* const _v) {
+	template<typename T>
+	std::unique_ptr<type_check<is_set,T> > from_bytes(DeserializationManager* ctx, char* const _v) {
 		int size = ((int*)_v)[0];
 		char* v = _v + sizeof(int);
 		auto r = std::make_unique<std::set<typename T::key_type> >();
@@ -462,8 +462,8 @@ namespace mutils{
 		return std::move(r);
 	}
 
-	template<typename T, typename P>
-	std::unique_ptr<type_check<is_pair,T > > from_bytes(P* ctx, char const * v){
+	template<typename T>
+	std::unique_ptr<type_check<is_pair,T > > from_bytes(DeserializationManager* ctx, char const * v){
 		using ft = typename T::first_type;
 		using st = typename T::second_type;
 		auto fst = from_bytes<ft>(ctx,v);
@@ -471,8 +471,8 @@ namespace mutils{
 			(*fst, *from_bytes<st>(ctx,v + bytes_size(*fst)));
 	}
 
-	template<typename T, typename P>
-	std::enable_if_t<is_vector<T>::value,std::unique_ptr<T> > from_bytes(P* ctx, char const * v){
+	template<typename T>
+	std::enable_if_t<is_vector<T>::value,std::unique_ptr<T> > from_bytes(DeserializationManager* ctx, char const * v){
 		using member = typename T::value_type;
 		if (std::is_pod<typename T::value_type>::value){
 			member const * const start = (member*) (v + sizeof(int));
