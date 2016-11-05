@@ -50,6 +50,7 @@ namespace mutils{
 		 */
 		virtual std::size_t bytes_size() const = 0;
 
+#ifndef NDEBUG
 		/**
 		 * If this object requires context in order to correctly 
 		 * deserialize, this method will associate that context
@@ -58,6 +59,7 @@ namespace mutils{
 		 * empty.
 		 */
 		virtual void ensure_registered(DeserializationManager&) = 0;
+#endif
 		virtual ~ByteRepresentable(){}
 
 		/**
@@ -134,6 +136,7 @@ namespace mutils{
 				
 			}
 			assert(false && "Error: no registered manager exists");
+			struct dead_code{}; throw dead_code{};
 		}
 
 		/**
@@ -146,6 +149,7 @@ namespace mutils{
 					return dynamic_cast<T&>(*candidate);
 			}
 			assert(false && "Error: no registered manager exists");
+			struct dead_code{}; throw dead_code{};
 		}
 
 		/**
@@ -228,6 +232,7 @@ namespace mutils{
 
     void post_object(const std::function<void (char const * const, std::size_t)>& f, const ByteRepresentable& br);
 
+#ifndef NDEBUG
 	/**
 	 * Calls b.ensure_registered(dm) when b is a ByteRepresentable;
 	 * returns true when b is POD.
@@ -240,6 +245,7 @@ namespace mutils{
 	 */
 	template<typename T, restrict(std::is_pod<T>::value)>
 	void ensure_registered(const T&, DeserializationManager&){}
+#endif
 
 	/**
 	 * calls b.to_bytes(v) when b is a ByteRepresentable;
@@ -294,7 +300,12 @@ namespace mutils{
 		std::size_t bytes_size() const {
 			return size;
 		}
+
+#ifndef NDEBUG
+		
 		void ensure_registered(DeserializationManager&){}
+
+#endif
 
 		template<typename DSM>
 		static std::unique_ptr<marshalled>
@@ -362,6 +373,7 @@ namespace mutils{
     auto to_bytes(const T &t, char* v){
         auto res = std::memcpy(v,&t,sizeof(T));
         assert(res);
+		(void)res;
         return sizeof(T);
     }
 
@@ -392,6 +404,7 @@ namespace mutils{
     }
 	//end to_bytes section
 
+#ifndef NDEBUG
 	//ensure_registered definitions -- these could go anywhere since they don't depend on any other functions
 	template<typename T>
 	void ensure_registered(const std::vector<T>& v, DeserializationManager& dm){
@@ -409,6 +422,7 @@ namespace mutils{
         for (auto &e : v) ensure_registered(e,dm);
     }
     //end ensure_registered section
+#endif
 
 	//from_bytes definitions
 	template<typename T>

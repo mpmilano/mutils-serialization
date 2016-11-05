@@ -20,10 +20,12 @@ namespace mutils {
 	std::size_t bytes_size(const std::string& b){
 		return b.length() + 1;
 	}
-	
+
+#ifndef NDEBUG
 	void ensure_registered(ByteRepresentable& b, DeserializationManager& dm){
 		b.ensure_registered(dm);
 	}
+#endif
 
 	std::function<void (char const * const, std::size_t)> post_to_buffer(std::size_t &index, char * _v){
 		return [&index,_v](char const * const v, std::size_t size){
