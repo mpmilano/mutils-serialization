@@ -27,9 +27,9 @@ namespace mutils {
 	}
 #endif
 
-	std::function<void (char const * const, std::size_t)> post_to_buffer(std::size_t &index, char * _v){
-		return [&index,_v](char const * const v, std::size_t size){
-			memcpy(_v + index, v, size);
+	std::function<void (char const * const, std::size_t)> post_to_buffer(std::size_t &index, char * dest_buf){
+		return [&index,dest_buf](char const * const read_buf, std::size_t size){
+			memcpy(dest_buf + index, read_buf, size);
 			index += size;
 		};
 	}

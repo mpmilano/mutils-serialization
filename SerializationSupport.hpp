@@ -71,7 +71,7 @@ namespace mutils{
 		 * to use mutils::from_bytes<T>(DeserializationManager*,v) instead.
 		 */
 		//needs to exist, but can't declare virtual statics
-		//virtual static std::unique_ptr<T> from_bytes(DeserializationManager *p, char *v) const  = 0;
+		//virtual static std::unique_ptr<T> from_bytes(DeserializationManager *p, const char *v)  = 0;
 	};
 
 	/**
@@ -197,6 +197,21 @@ namespace mutils{
         else {
             int accum = 0;
             for (auto &e : v) accum += bytes_size(e);
+            return accum + sizeof(int);
+        }
+    }
+
+    /**
+     * Sums the size of all elements of this list, plus one int for the number
+     * of elements.
+     */
+    template<typename T>
+    std::size_t bytes_size(const std::list<T>& list) {
+        if(std::is_pod<T>::value)
+            return list.size() * bytes_size(list.back()) + sizeof(int);
+        else {
+            int accum = 0;
+            for(const auto& e : list) accum += bytes_size(e);
             return accum + sizeof(int);
         }
     }
@@ -330,7 +345,16 @@ namespace mutils{
 	//end forward-declaring; everything past this point is implementation,
 	//and not essential to understanding  the interface.
 
-	std::function<void (char const * const, std::size_t)> post_to_buffer(std::size_t &index, char * _v);
+	/**
+	 * Constructs a buffer-consuming function that will copy its input to the
+	 * provided destination buffer at the specified index. The created function
+	 * can be used as an input to post_object to make post_object serialize the
+	 * object to a buffer.
+	 * @param index The offset within dest_buf at which the function should copy inputs
+	 * @param dest_buf The buffer that should receive bytes read by the function
+	 * @return A function that consumes a byte buffer and writes it to dest_buf
+	 */
+	std::function<void (char const * const, std::size_t)> post_to_buffer(std::size_t& index, char * dest_buf);
 
 
 	//post_object definitions -- must come before to_bytes definitions that use them
@@ -350,6 +374,15 @@ namespace mutils{
             }
         }
     }
+
+	template<typename T>
+    void post_object(const std::function<void (char const * const, std::size_t)>& f, const std::list<T>& list){
+	    int size = list.size();
+	    f((char*)&size,sizeof(size));
+	    for(const auto& e : list) {
+	        post_object(f, e);
+	    }
+	}
 
     template<typename T>
     void post_object(const std::function<void (char const * const, std::size_t)>& f, const std::set<T>& s){
@@ -386,6 +419,14 @@ namespace mutils{
 
 	}
 
+	template<typename T>
+	std::size_t to_bytes(const std::list<T>& list, char* buffer) {
+	    auto size = bytes_size(list);
+	    std::size_t offset = 0;
+	    post_object(post_to_buffer(offset, buffer), list);
+	    return size;
+	}
+
 	template<typename T, typename V>
 	std::size_t to_bytes(const std::pair<T,V> &pair, char*){
 		std::size_t index{0};
@@ -419,6 +460,11 @@ namespace mutils{
 
     template<typename T>
     void ensure_registered(const std::set<T>& v, DeserializationManager& dm){
+        for (auto &e : v) ensure_registered(e,dm);
+    }
+
+    template<typename T>
+    void ensure_registered(const std::list<T>& v, DeserializationManager& dm){
         for (auto &e : v) ensure_registered(e,dm);
     }
     //end ensure_registered section
@@ -457,6 +503,12 @@ namespace mutils{
 	template<>
 	struct is_string<const std::string> : std::true_type {};
 	
+	template<typename>
+    struct is_list : std::false_type {};
+
+    template<typename T>
+    struct is_list<std::list<T> > : std::true_type {};
+
 	template<typename T>
 	std::unique_ptr<type_check<is_string,T> > from_bytes(DeserializationManager*, char const *v){
 		assert(v);
@@ -464,9 +516,9 @@ namespace mutils{
 	}
 	
 	template<typename T>
-	std::unique_ptr<type_check<is_set,T> > from_bytes(DeserializationManager* ctx, char* const _v) {
+	std::unique_ptr<type_check<is_set,T> > from_bytes(DeserializationManager* ctx, const char* _v) {
 		int size = ((int*)_v)[0];
-		char* v = _v + sizeof(int);
+		const char* v = _v + sizeof(int);
 		auto r = std::make_unique<std::set<typename T::key_type> >();
 		for (int i = 0; i < size; ++i){
 			auto e = from_bytes<typename T::key_type>(ctx,v);
@@ -477,7 +529,7 @@ namespace mutils{
 	}
 
 	template<typename T>
-	std::unique_ptr<type_check<is_pair,T > > from_bytes(DeserializationManager* ctx, char const * v){
+	std::unique_ptr<type_check<is_pair,T > > from_bytes(DeserializationManager* ctx, const char * v){
 		using ft = typename T::first_type;
 		using st = typename T::second_type;
 		auto fst = from_bytes<ft>(ctx,v);
@@ -485,6 +537,21 @@ namespace mutils{
 			(*fst, *from_bytes<st>(ctx,v + bytes_size(*fst)));
 	}
 
+	template<typename L>
+    std::unique_ptr<type_check<is_list,L> > from_bytes(DeserializationManager* ctx, const char * buffer){
+	    using elem = typename L::value_type;
+	    int size = ((int*) buffer)[0];
+	    const char* buf_ptr = buffer + sizeof(int);
+	    std::unique_ptr<std::list<elem>> return_list{new L()};
+	    for(int i = 0; i < size; ++i) {
+	        std::unique_ptr<elem> item = from_bytes<elem>(ctx, buf_ptr);
+	        buf_ptr += bytes_size(*item);
+	        return_list->push_back(*item);
+	    }
+	    return std::move(return_list);
+	}
+
+	//Note: T is the type of the vector, not the vector's type parameter T
 	template<typename T>
 	std::enable_if_t<is_vector<T>::value,std::unique_ptr<T> > from_bytes(DeserializationManager* ctx, char const * v){
 		using member = typename T::value_type;
