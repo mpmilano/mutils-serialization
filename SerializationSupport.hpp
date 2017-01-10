@@ -72,6 +72,19 @@ namespace mutils{
 		 */
 		//needs to exist, but can't declare virtual statics
 		//virtual static std::unique_ptr<T> from_bytes(DeserializationManager *p, char *v) const  = 0;
+
+		/**
+		 * from_bytes_noalloc takes the DeserializationManager which manages this object's context
+		 * (or nullptr, if this object does not require a context), a byte array of size
+		 * at least bytes_size(), and returns an instance of that object.  This instance may share storage
+		 * with the provided byte array, and is not valid past the end of life of the byte array.
+		 *
+		 * NOTE: it is recommended that users not call this directly, and prefer
+		 * to use mutils::deserialize_and_run<T>(DeserializationManager*,v, f) instead.  If the cost of passing a
+		 * function is too high, please still prefer mutils::from_bytes_noalloc<T>(DeserializationManager*,v).
+		 */
+		//needs to exist, but can't declare virtual statics
+		//virtual static context_ptr<T> from_bytes_noalloc(DeserializationManager *p, char *v) const  = 0;
 	};
 
 	/**
@@ -106,7 +119,7 @@ namespace mutils{
 	 * /be sure to have a pointer to this on hand whenever you need to deserialize
 	 * something. If you're dead certain you never need a deserialization
 	 * context, then you can not use this at all and just pass null
-	 * to from_bytes in place of this.
+	 * to from_bytes* in place of this.
 	 */
 	struct DeserializationManager {
 
@@ -281,12 +294,39 @@ namespace mutils{
 	template<typename T>
 	std::enable_if_t<std::is_pod<T>::value
 					 ,std::unique_ptr<std::decay_t<T> > > from_bytes(DeserializationManager*, char const *v);
+	
+	/**
+	 * Calls T::from_bytes_noalloc(ctx,v) when T is a ByteRepresentable. 
+	 * returns raw pointer when T is a POD
+	 * custom logic is implemented for some STL types.
+	 */
+	template<typename T>
+	std::enable_if_t<std::is_base_of<ByteRepresentable CMA T>::value,
+					 context_ptr<T> > from_bytes_noalloc(DeserializationManager* ctx, char *v){
+		return T::from_bytes_noalloc(ctx,v);
+	}
+
+	/**
+	 * Calls T::from_bytes_noalloc(ctx,v) when T is a ByteRepresentable. 
+	 * returns raw pointer when T is a POD
+	 * custom logic is implemented for some STL types.
+	 */
+	template<typename T>
+	std::enable_if_t<std::is_pod<T>::value
+					 ,context_ptr<std::decay_t<T> > > from_bytes_noalloc(DeserializationManager*, char  *v);
 
 	/** 
 	 * The "marshalled" type is a wrapper for already-serialized types; 
 	 */
 
-	struct marshalled : public ByteRepresentable{
+	struct marshalled;
+	
+	template<>
+	struct get_context_obj_str<marshalled> : public get_context_obj_str<void> {
+		using get_context_obj_str<void>::type;
+	};
+	
+	struct marshalled : public ByteRepresentable {
 		const std::size_t size;
 		char const * const data;
 
@@ -315,8 +355,16 @@ namespace mutils{
 						  "Do not deserialize into a marshalled. please."
 				);
 			return nullptr;
-		}
+		}		
+
+		static context_ptr<marshalled>
+		from_bytes_noalloc(DeserializationManager const * const, char* v);
 	};
+
+	static context_ptr<marshalled>
+	marshalled::from_bytes_noalloc(DeserializationManager const * const, char* v) {
+		return context_ptr<marshalled>((marshalled*) v);
+	}
 
 
 	/**
@@ -437,9 +485,11 @@ namespace mutils{
 		else return nullptr;
 	}
 
-	template<typename T, typename P>
-	std::unique_ptr<T> from_bytes_stupid(P* p, T*, char const * v) {
-		return from_bytes<T>(p,v);
+	template<typename T>
+	std::enable_if_t<std::is_pod<T>::value
+					 ,context_ptr<std::decay_t<T> > > from_bytes_noalloc(DeserializationManager*, char const *v){
+		using T2 = std::decay_t<T>;
+		return context_ptr<T2>{(T2*)v};
 	}
 
 	template<typename>
@@ -464,6 +514,12 @@ namespace mutils{
 	}
 	
 	template<typename T>
+	context_ptr<type_check<is_string,T> > from_bytes_noalloc(DeserializationManager*, char const *v){
+		assert(v);
+		return context_ptr<T>(new string{v});
+	}
+	
+	template<typename T>
 	std::unique_ptr<type_check<is_set,T> > from_bytes(DeserializationManager* ctx, char* const _v) {
 		int size = ((int*)_v)[0];
 		char* v = _v + sizeof(int);
@@ -477,12 +533,22 @@ namespace mutils{
 	}
 
 	template<typename T>
+	context_ptr<type_check<is_set,T> > from_bytes_noalloc(DeserializationManager* ctx, char const *v){
+		return from_bytes<T>(ctx,v).release();
+	}
+
+	template<typename T>
 	std::unique_ptr<type_check<is_pair,T > > from_bytes(DeserializationManager* ctx, char const * v){
 		using ft = typename T::first_type;
 		using st = typename T::second_type;
 		auto fst = from_bytes<ft>(ctx,v);
 		return std::make_unique<std::pair<ft,st> >
 			(*fst, *from_bytes<st>(ctx,v + bytes_size(*fst)));
+	}
+
+	template<typename T>
+	context_ptr<type_check<is_pair,T> > from_bytes_noalloc(DeserializationManager* ctx, char const *v){
+		return from_bytes<T>(ctx,v).release();
 	}
 
 	template<typename T>
@@ -506,6 +572,11 @@ namespace mutils{
 			}
 			return accum;
 		}
+	}
+
+	template<typename T>
+	context_ptr<type_check<is_vector,T> > from_bytes_noalloc(DeserializationManager* ctx, char const *v){
+		return from_bytes<T>(ctx,v).release();
 	}
 
 	
