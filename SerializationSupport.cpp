@@ -50,4 +50,8 @@ namespace mutils {
 		return 0;
 	}
 
+	std::size_t from_bytes_noalloc_v(DeserializationManager *, char const * const ){
+		return 0;
+	}
+
 }
