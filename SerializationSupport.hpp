@@ -88,12 +88,6 @@ namespace mutils{
 		//virtual static context_ptr<T> from_bytes_noalloc(DeserializationManager *p, const char *v) const  = 0;
 	};
 
-	template<>
-	struct ContextDeleter<ByteRepresentable> {
-		void operator()(ByteRepresentable* br){
-			delete br;
-		}
-	};
 
 	/**
 	 * If a class which implements ByteRepresentable requires a context in order
@@ -328,6 +322,11 @@ namespace mutils{
 					 context_ptr<T> > from_bytes_noalloc(DeserializationManager* ctx, char *v){
 		return T::from_bytes_noalloc(ctx,v);
 	}
+	template<typename T>
+	std::enable_if_t<std::is_base_of<ByteRepresentable CMA T>::value,
+					 context_ptr<T> > from_bytes_noalloc(DeserializationManager* ctx, char const * const v){
+		return T::from_bytes_noalloc(ctx,v);
+	}
 
 	/**
 	 * Calls T::from_bytes_noalloc(ctx,v) when T is a ByteRepresentable. 
@@ -338,6 +337,10 @@ namespace mutils{
 	template<typename T>
 	std::enable_if_t<std::is_pod<T>::value
 					 ,context_ptr<std::decay_t<T> > > from_bytes_noalloc(DeserializationManager*, char *v);
+
+	template<typename T>
+	std::enable_if_t<std::is_pod<T>::value
+					 ,context_ptr<const std::decay_t<T> > > from_bytes_noalloc(DeserializationManager*, char const * const v);
 
 	/**
 	 * Calls mutils::from_bytes_noalloc<T>(ctx,v), dereferences the result, and passes
@@ -351,13 +354,6 @@ namespace mutils{
 	 * The "marshalled" type is a wrapper for already-serialized types; 
 	 */
 
-	struct marshalled;
-	
-	template<>
-	struct get_context_obj_str<marshalled> : public get_context_obj_str<void> {
-		using get_context_obj_str<void>::type;
-	};
-	
 	struct marshalled : public ByteRepresentable {
 		const std::size_t size;
 		char const * const data;
@@ -366,6 +362,7 @@ namespace mutils{
 			:size(size),data(data){}
 
 		std::size_t to_bytes(char* v) const {
+			assert(false && "revisit this");
 			std::memcpy(v,data,size);
 			return size;
 		}
@@ -392,11 +389,6 @@ namespace mutils{
 		static context_ptr<marshalled>
 		from_bytes_noalloc(DeserializationManager const * const, char* v);
 	};
-
-	context_ptr<marshalled>
-	marshalled::from_bytes_noalloc(DeserializationManager const * const, char* v) {
-		return context_ptr<marshalled>((marshalled*) v);
-	}
 
 
 	/**
@@ -555,6 +547,14 @@ namespace mutils{
 		return context_ptr<T2>{(T2*)v};
 	}
 
+	template<typename T>
+	std::enable_if_t<std::is_pod<T>::value
+					 ,context_ptr<const std::decay_t<T> > > from_bytes_noalloc(DeserializationManager*, char const * const v){
+		using T2 = std::decay_t<T>;
+		return context_ptr<const T2>{(const T2*)v};
+	}
+
+
 	template<typename>
 	struct is_pair : std::false_type {};
 
@@ -582,6 +582,7 @@ namespace mutils{
 		return std::make_unique<T>(v);
 	}
 	
+
 	template<typename T>
 	context_ptr<type_check<is_string,T> > from_bytes_noalloc(DeserializationManager*, char const *v){
 		assert(v);
@@ -629,6 +630,7 @@ namespace mutils{
 	    return std::move(return_list);
 	}
 
+
 	//Note: T is the type of the vector, not the vector's type parameter T
 	template<typename T>
 	context_ptr<type_check<is_pair,T> > from_bytes_noalloc(DeserializationManager* ctx, char const *v){
@@ -657,6 +659,7 @@ namespace mutils{
 			return accum;
 		}
 	}
+
 
 	template<typename T>
 	context_ptr<type_check<is_vector,T> > from_bytes_noalloc(DeserializationManager* ctx, char const *v){
@@ -691,7 +694,19 @@ namespace mutils{
 	std::size_t from_bytes_noalloc_v(DeserializationManager *, char const * const );
 	
 	template<typename T, typename... Rest>
+	std::size_t from_bytes_noalloc_v_nc(DeserializationManager *dsm, char * buf, context_ptr<T> &first, context_ptr<Rest>& ... rest){
+		first = from_bytes_noalloc<T>(dsm,buf);
+		auto size = bytes_size(*first);
+		return size + from_bytes_noalloc_v(dsm,buf + size,rest...);
+	}
+
+	template<typename T, typename... Rest>
 	std::size_t from_bytes_noalloc_v(DeserializationManager *dsm, char * buf, context_ptr<T> &first, context_ptr<Rest>& ... rest){
+		return from_bytes_noalloc_v_nc(dsm,buf,first,rest...);
+	}
+
+	template<typename T, typename... Rest>
+	std::size_t from_bytes_noalloc_v(DeserializationManager *dsm, char const * const buf, context_ptr<const T> &first, context_ptr<const Rest>& ... rest){
 		first = from_bytes_noalloc<T>(dsm,buf);
 		auto size = bytes_size(*first);
 		return size + from_bytes_noalloc_v(dsm,buf + size,rest...);
@@ -721,7 +736,8 @@ namespace mutils{
 		std::tuple<DeserializationManager*, char*, context_ptr<Args>...> args_tuple;
 		std::get<0>(args_tuple) = dsm;
 		std::get<1>(args_tuple) = v;
-		auto size = callFunc(from_bytes_noalloc_v<Args...>,args_tuple);
+		auto size = callFunc<std::size_t,decltype(args_tuple), /*Args: */ DeserializationManager*, char *, context_ptr<Args>&...>
+			(from_bytes_noalloc_v_nc<Args...>,args_tuple);
 		return callFunc([&fun](const auto&, const auto&, auto&... a){return fun(*a...);},args_tuple);
 	}
 

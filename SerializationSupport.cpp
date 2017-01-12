@@ -27,6 +27,11 @@ namespace mutils {
 	}
 #endif
 
+	context_ptr<marshalled>
+	marshalled::from_bytes_noalloc(DeserializationManager const * const, char* v) {
+		return context_ptr<marshalled>((marshalled*) v);
+	}
+
 	std::function<void (char const * const, std::size_t)> post_to_buffer(std::size_t &index, char * dest_buf){
 		return [&index,dest_buf](char const * const read_buf, std::size_t size){
 			memcpy(dest_buf + index, read_buf, size);

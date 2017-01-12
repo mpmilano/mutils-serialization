@@ -4,6 +4,7 @@
 
 namespace mutils{
 
+
 	struct Bytes : public ByteRepresentable{
 		
 		char const * const bytes;
@@ -28,9 +29,15 @@ namespace mutils{
 		}
 		
 		void ensure_registered(DeserializationManager&){}
+
+		//from_bytes is disabled in this implementation, because it's intended only for nocopy-aware scenarios
+		template<typename T, typename V>
+		static std::unique_ptr<Bytes> from_bytes(T*, V*){
+			static_assert(std::is_same<T,V>::value,"Error: from_bytes disabled for mutils::Bytes. See comment in source.");
+		}
 		
-		static std::unique_ptr<Bytes> from_bytes(DeserializationManager *, char const * const v)  {
-			return std::make_unique<Bytes>(v + sizeof(std::size_t),((std::size_t*)(v))[0]);
+		static context_ptr<Bytes> from_bytes_noalloc(DeserializationManager *, char const * const v)  {
+			return context_ptr<Bytes>{new Bytes(v + sizeof(std::size_t),((std::size_t*)(v))[0])};
 		}
 
 	};
