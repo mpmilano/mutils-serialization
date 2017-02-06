@@ -254,11 +254,11 @@ namespace mutils{
      * and will post the object (potentially in multiple buffers)
      * via repeated calls to the function
      */
-    template<typename BR>
-    std::enable_if_t<std::is_pod<BR>::value>
-    post_object(const std::function<void (char const * const, std::size_t)>& f, const BR& br){
-        f((char*)&br,sizeof(BR));
-    }
+	template<typename F, typename BR, typename... Args>
+	std::enable_if_t<std::is_pod<BR>::value>
+	post_object(const F& f, const BR& br, Args&&... args){
+		f(std::forward<Args>(args)...,(char*)&br,sizeof(BR));
+	}
 
     void post_object(const std::function<void (char const * const, std::size_t)>& f, const ByteRepresentable& br);
 
@@ -527,6 +527,18 @@ namespace mutils{
     //end ensure_registered section
 #endif
 
+	//from_string definition
+
+	template<typename T>
+	std::unique_ptr<type_check<std::is_integral,T> > from_string(DeserializationManager*, char const *v, std::size_t length){
+		return std::make_unique<T>(std::stoll(std::string{v,length}));
+	}
+
+	template<typename T>
+	std::unique_ptr<type_check<std::is_floating_point,T> > from_string(DeserializationManager*, char const *v, std::size_t length){
+		return std::make_unique<T>(std::stold(std::string{v,length}));
+	}
+	
 	//from_bytes definitions
 	template<typename T>
 	std::enable_if_t<std::is_pod<T>::value
