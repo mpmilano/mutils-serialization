@@ -2,6 +2,7 @@
 #include "mutils.hpp"
 #include "type_utils.hpp"
 #include "SerializationMacros.hpp"
+#include "context_ptr.hpp"
 #include "macro_utils.hpp"
 #include <vector>
 #include <cstring>
@@ -71,8 +72,22 @@ namespace mutils{
 		 * to use mutils::from_bytes<T>(DeserializationManager*,v) instead.
 		 */
 		//needs to exist, but can't declare virtual statics
-		//virtual static std::unique_ptr<T> from_bytes(DeserializationManager *p, const char *v)  = 0;
+		//virtual static std::unique_ptr<T> from_bytes(DeserializationManager *p, const char *v) const  = 0;
+
+		/**
+		 * from_bytes_noalloc takes the DeserializationManager which manages this object's context
+		 * (or nullptr, if this object does not require a context), a byte array of size
+		 * at least bytes_size(), and returns an instance of that object.  This instance may share storage
+		 * with the provided byte array, and is not valid past the end of life of the byte array.
+		 *
+		 * NOTE: it is recommended that users not call this directly, and prefer
+		 * to use mutils::deserialize_and_run<T>(DeserializationManager*,v, f) instead.  If the cost of passing a
+		 * function is too high, please still prefer mutils::from_bytes_noalloc<T>(DeserializationManager*,v).
+		 */
+		//needs to exist, but can't declare virtual statics
+		//virtual static context_ptr<T> from_bytes_noalloc(DeserializationManager *p, const char *v) const  = 0;
 	};
+
 
 	/**
 	 * If a class which implements ByteRepresentable requires a context in order
@@ -106,7 +121,7 @@ namespace mutils{
 	 * /be sure to have a pointer to this on hand whenever you need to deserialize
 	 * something. If you're dead certain you never need a deserialization
 	 * context, then you can not use this at all and just pass null
-	 * to from_bytes in place of this.
+	 * to from_bytes* in place of this.
 	 */
 	struct DeserializationManager {
 
@@ -239,11 +254,11 @@ namespace mutils{
      * and will post the object (potentially in multiple buffers)
      * via repeated calls to the function
      */
-    template<typename BR>
-    std::enable_if_t<std::is_pod<BR>::value>
-    post_object(const std::function<void (char const * const, std::size_t)>& f, const BR& br){
-        f((char*)&br,sizeof(BR));
-    }
+	template<typename F, typename BR, typename... Args>
+	std::enable_if_t<std::is_pod<BR>::value>
+	post_object(const F& f, const BR& br, Args&&... args){
+		f(std::forward<Args>(args)...,(char*)&br,sizeof(BR));
+	}
 
     void post_object(const std::function<void (char const * const, std::size_t)>& f, const ByteRepresentable& br);
 
@@ -296,12 +311,50 @@ namespace mutils{
 	template<typename T>
 	std::enable_if_t<std::is_pod<T>::value
 					 ,std::unique_ptr<std::decay_t<T> > > from_bytes(DeserializationManager*, char const *v);
+	
+	/**
+	 * Calls T::from_bytes_noalloc(ctx,v) when T is a ByteRepresentable. 
+	 * returns raw pointer when T is a POD
+	 * custom logic is implemented for some STL types.
+	 */
+	template<typename T>
+	std::enable_if_t<std::is_base_of<ByteRepresentable CMA T>::value,
+					 context_ptr<T> > from_bytes_noalloc(DeserializationManager* ctx, char *v){
+		return T::from_bytes_noalloc(ctx,v);
+	}
+	template<typename T>
+	std::enable_if_t<std::is_base_of<ByteRepresentable CMA T>::value,
+					 context_ptr<T> > from_bytes_noalloc(DeserializationManager* ctx, char const * const v){
+		return T::from_bytes_noalloc(ctx,v);
+	}
 
+	/**
+	 * Calls T::from_bytes_noalloc(ctx,v) when T is a ByteRepresentable. 
+	 * returns raw pointer when T is a POD
+	 * custom logic is implemented for some STL types.
+	 */
+
+	template<typename T>
+	std::enable_if_t<std::is_pod<T>::value
+					 ,context_ptr<std::decay_t<T> > > from_bytes_noalloc(DeserializationManager*, char *v);
+
+	template<typename T>
+	std::enable_if_t<std::is_pod<T>::value
+					 ,context_ptr<const std::decay_t<T> > > from_bytes_noalloc(DeserializationManager*, char const * const v);
+
+	/**
+	 * Calls mutils::from_bytes_noalloc<T>(ctx,v), dereferences the result, and passes
+	 * it to fun.  Returns whatever fun returns.  Memory safe, assuming fun doesn't do
+	 * something stupid.
+	 */
+	template<typename T, typename F>
+	auto deserialize_and_run(DeserializationManager* dsm, char * v, const F& fun);
+	
 	/** 
 	 * The "marshalled" type is a wrapper for already-serialized types; 
 	 */
 
-	struct marshalled : public ByteRepresentable{
+	struct marshalled : public ByteRepresentable {
 		const std::size_t size;
 		char const * const data;
 
@@ -309,6 +362,7 @@ namespace mutils{
 			:size(size),data(data){}
 
 		std::size_t to_bytes(char* v) const {
+			assert(false && "revisit this");
 			std::memcpy(v,data,size);
 			return size;
 		}
@@ -330,7 +384,10 @@ namespace mutils{
 						  "Do not deserialize into a marshalled. please."
 				);
 			return nullptr;
-		}
+		}		
+
+		static context_ptr<marshalled>
+		from_bytes_noalloc(DeserializationManager const * const, char* v);
 	};
 
 
@@ -470,6 +527,18 @@ namespace mutils{
     //end ensure_registered section
 #endif
 
+	//from_string definition
+
+	template<typename T>
+	std::unique_ptr<type_check<std::is_integral,T> > from_string(DeserializationManager*, char const *v, std::size_t length){
+		return std::make_unique<T>(std::stoll(std::string{v,length}));
+	}
+
+	template<typename T>
+	std::unique_ptr<type_check<std::is_floating_point,T> > from_string(DeserializationManager*, char const *v, std::size_t length){
+		return std::make_unique<T>(std::stold(std::string{v,length}));
+	}
+	
 	//from_bytes definitions
 	template<typename T>
 	std::enable_if_t<std::is_pod<T>::value
@@ -483,10 +552,20 @@ namespace mutils{
 		else return nullptr;
 	}
 
-	template<typename T, typename P>
-	std::unique_ptr<T> from_bytes_stupid(P* p, T*, char const * v) {
-		return from_bytes<T>(p,v);
+	template<typename T>
+	std::enable_if_t<std::is_pod<T>::value
+					 ,context_ptr<std::decay_t<T> > > from_bytes_noalloc(DeserializationManager*, char *v){
+		using T2 = std::decay_t<T>;
+		return context_ptr<T2>{(T2*)v};
 	}
+
+	template<typename T>
+	std::enable_if_t<std::is_pod<T>::value
+					 ,context_ptr<const std::decay_t<T> > > from_bytes_noalloc(DeserializationManager*, char const * const v){
+		using T2 = std::decay_t<T>;
+		return context_ptr<const T2>{(const T2*)v};
+	}
+
 
 	template<typename>
 	struct is_pair : std::false_type {};
@@ -515,6 +594,13 @@ namespace mutils{
 		return std::make_unique<T>(v);
 	}
 	
+
+	template<typename T>
+	context_ptr<type_check<is_string,T> > from_bytes_noalloc(DeserializationManager*, char const *v){
+		assert(v);
+		return context_ptr<T>(new std::string{v});
+	}
+	
 	template<typename T>
 	std::unique_ptr<type_check<is_set,T> > from_bytes(DeserializationManager* ctx, const char* _v) {
 		int size = ((int*)_v)[0];
@@ -526,6 +612,11 @@ namespace mutils{
 			r->insert(*e);
 		}
 		return std::move(r);
+	}
+
+	template<typename T>
+	context_ptr<type_check<is_set,T> > from_bytes_noalloc(DeserializationManager* ctx, char const *v){
+		return context_ptr<T>{from_bytes<T>(ctx,v).release()};
 	}
 
 	template<typename T>
@@ -551,7 +642,13 @@ namespace mutils{
 	    return std::move(return_list);
 	}
 
+
 	//Note: T is the type of the vector, not the vector's type parameter T
+	template<typename T>
+	context_ptr<type_check<is_pair,T> > from_bytes_noalloc(DeserializationManager* ctx, char const *v){
+		return context_ptr<T>{from_bytes<T>(ctx,v).release()};
+	}
+
 	template<typename T>
 	std::enable_if_t<is_vector<T>::value,std::unique_ptr<T> > from_bytes(DeserializationManager* ctx, char const * v){
 		using member = typename T::value_type;
@@ -573,6 +670,12 @@ namespace mutils{
 			}
 			return accum;
 		}
+	}
+
+
+	template<typename T>
+	context_ptr<type_check<is_vector,T> > from_bytes_noalloc(DeserializationManager* ctx, char const *v){
+		return context_ptr<T>{from_bytes<T>(ctx,v).release()};
 	}
 
 	
@@ -598,6 +701,62 @@ namespace mutils{
 		first = from_bytes<T>(dsm,buf);
 		auto size = bytes_size(*first);
 		return size + from_bytes_v(dsm,buf + size,rest...);
+	}
+
+	std::size_t from_bytes_noalloc_v(DeserializationManager *, char const * const );
+	
+	template<typename T, typename... Rest>
+	std::size_t from_bytes_noalloc_v_nc(DeserializationManager *dsm, char * buf, context_ptr<T> &first, context_ptr<Rest>& ... rest){
+		first = from_bytes_noalloc<T>(dsm,buf);
+		auto size = bytes_size(*first);
+		return size + from_bytes_noalloc_v(dsm,buf + size,rest...);
+	}
+
+	template<typename T, typename... Rest>
+	std::size_t from_bytes_noalloc_v(DeserializationManager *dsm, char * buf, context_ptr<T> &first, context_ptr<Rest>& ... rest){
+		return from_bytes_noalloc_v_nc(dsm,buf,first,rest...);
+	}
+
+	template<typename T, typename... Rest>
+	std::size_t from_bytes_noalloc_v(DeserializationManager *dsm, char const * const buf, context_ptr<const T> &first, context_ptr<const Rest>& ... rest){
+		first = from_bytes_noalloc<T>(dsm,buf);
+		auto size = bytes_size(*first);
+		return size + from_bytes_noalloc_v(dsm,buf + size,rest...);
+	}
+	
+	//sample of how this might work.  Nocopy, plus complete memory safety, but
+	//at the cost of callback land.
+	template<typename T, typename F>
+	auto deserialize_and_run(DeserializationManager* dsm, char * v, const F& fun){
+		using fun_t = std::function<std::result_of_t<F(T&)> (T&)>;
+		//ensure implicit conversion can run
+		static_assert(std::is_convertible<F, fun_t>::value,
+					  "Error: type mismatch on function and target deserialialized type");
+		return fun(*from_bytes_noalloc<T>(dsm,v));
+	}
+
+	//sample of how this might work.  Nocopy, plus complete memory safety, but
+	//at the cost of callback land.
+	template<typename F, typename R, typename... Args>
+	auto deserialize_and_run(DeserializationManager* dsm, char * v, const F& fun, std::function<R (Args&...)> const * const){
+		using result_t = std::result_of_t<F(Args&...)>;
+		static_assert(std::is_same<result_t,R>::value,"Error: function types mismatch.");
+		using fun_t = std::function<result_t (Args&...)>;
+		//ensure implicit conversion can run
+		static_assert(std::is_convertible<F, fun_t>::value,
+					  "Error: type mismatch on function and target deserialialized type");
+		std::tuple<DeserializationManager*, char*, context_ptr<Args>...> args_tuple;
+		std::get<0>(args_tuple) = dsm;
+		std::get<1>(args_tuple) = v;
+		auto size = callFunc<std::size_t,decltype(args_tuple), /*Args: */ DeserializationManager*, char *, context_ptr<Args>&...>
+			(from_bytes_noalloc_v_nc<Args...>,args_tuple);
+		return callFunc([&fun](const auto&, const auto&, auto&... a){return fun(*a...);},args_tuple);
+	}
+
+	template<typename F>
+	auto deserialize_and_run(DeserializationManager* dsm, char * v, const F& fun){
+		using fun_t = std::decay_t<decltype(convert(fun))>;
+		return deserialize_and_run<F>(dsm,v,fun,(fun_t*) nullptr);
 	}
 
 }
