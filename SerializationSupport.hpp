@@ -202,8 +202,7 @@ namespace mutils{
     std::size_t bytes_size(const std::string& b);
 
     /**
-     * all of the elements of this vector, plus one int
-     * for the number of elements.
+     * all of the elements of this vector, plus one int for the number of elements.
      */
     template<typename T>
     std::size_t bytes_size (const std::vector<T> &v){
@@ -239,11 +238,28 @@ namespace mutils{
         return bytes_size(pair.first) + bytes_size(pair.second);
     }
 
+    /**
+     * All the elements of the set, plus one int for the number of elements.
+     */
     template<typename T>
     std::size_t bytes_size(const std::set<T>& s){
         int size = sizeof(int);
         for (auto &a : s) {
             size += bytes_size(a);
+        }
+        return size;
+    }
+
+    /**
+     * Sums the size of each key and value in the map, plus one int for the
+     * number of entries
+     */
+    template<typename K, typename V>
+    std::size_t bytes_size(const std::map<K,V>& m) {
+        int size = sizeof(int);
+        for(const auto& p : m) {
+            size += bytes_size(p.first);
+            size += bytes_size(p.second);
         }
         return size;
     }
@@ -456,11 +472,26 @@ namespace mutils{
         post_object(f,pair.second);
     }
 
+    template<typename K, typename V>
+    void post_object(const std::function<void (char const * const, std::size_t)>& f, const std::map<K,V>& map) {
+        int size = map.size();
+        f((char*)&size, sizeof(size));
+        for(const auto& pair : map) {
+            post_object(f, pair.first);
+            post_object(f, pair.second);
+        }
+    }
+
     //end post_object section
 
     //to_bytes definitions -- these must come after bytes_size and post_object definitions
+    //To reduce code duplication, these are all implemented in terms of post_object
+
+    /**
+     * Special to_bytes for POD types, which just uses memcpy
+     */
     template<typename T, restrict(std::is_pod<T>::value)>
-    auto to_bytes(const T &t, char* v){
+    std::size_t to_bytes(const T &t, char* v){
         auto res = std::memcpy(v,&t,sizeof(T));
         assert(res);
 		(void)res;
@@ -485,21 +516,28 @@ namespace mutils{
 	}
 
 	template<typename T, typename V>
-	std::size_t to_bytes(const std::pair<T,V> &pair, char*){
-		std::size_t index{0};
-		post_to_buffer(index,pair.first);
-		post_to_buffer(index,pair.second);
+	std::size_t to_bytes(const std::pair<T,V>& pair, char* buffer){
+		std::size_t index = 0;
+		post_object(post_to_buffer(index, buffer), pair);
 		return bytes_size(pair);
 	}
 
 	template<typename T>
     std::size_t to_bytes(const std::set<T>& s, char* _v){
-        std::size_t index{0};
+        std::size_t index = 0;
         auto size = bytes_size(s);
         post_object(post_to_buffer(index,_v),s);
         return size;
 
     }
+
+	template<typename K, typename V>
+	std::size_t to_bytes(const std::map<K,V>& m, char* buffer) {
+	    std::size_t index = 0;
+	    std::size_t size = bytes_size(m);
+	    post_object(post_to_buffer(index, buffer), m);
+	    return size;
+	}
 	//end to_bytes section
 
 #ifndef NDEBUG
@@ -566,6 +604,8 @@ namespace mutils{
 		return context_ptr<const T2>{(const T2*)v};
 	}
 
+	//Templates that become true_type when matched to the thing they identify,
+	//or become false_type if they fail to match, similar to std::is_pod
 
 	template<typename>
 	struct is_pair : std::false_type {};
@@ -587,6 +627,12 @@ namespace mutils{
 
     template<typename T>
     struct is_list<std::list<T> > : std::true_type {};
+
+    template<typename>
+    struct is_map : std::false_type{};
+
+    template<typename K, typename V>
+    struct is_map<std::map<K,V>>: std::true_type {};
 
 	template<typename T>
 	std::unique_ptr<type_check<is_string,T> > from_bytes(DeserializationManager*, char const *v){
@@ -623,9 +669,9 @@ namespace mutils{
 	std::unique_ptr<type_check<is_pair,T > > from_bytes(DeserializationManager* ctx, const char * v){
 		using ft = typename T::first_type;
 		using st = typename T::second_type;
-		auto fst = from_bytes<ft>(ctx,v);
-		return std::make_unique<std::pair<ft,st> >
-			(*fst, *from_bytes<st>(ctx,v + bytes_size(*fst)));
+		auto fst = from_bytes_noalloc<ft>(ctx,v);
+		return std::make_unique<std::pair<ft,st>>(
+		        *fst, *from_bytes_noalloc<st>(ctx,v + bytes_size(*fst)));
 	}
 
 	template<typename L>
@@ -635,7 +681,7 @@ namespace mutils{
 	    const char* buf_ptr = buffer + sizeof(int);
 	    std::unique_ptr<std::list<elem>> return_list{new L()};
 	    for(int i = 0; i < size; ++i) {
-	        std::unique_ptr<elem> item = from_bytes<elem>(ctx, buf_ptr);
+	        context_ptr<elem> item = from_bytes_noalloc<elem>(ctx, buf_ptr);
 	        buf_ptr += bytes_size(*item);
 	        return_list->push_back(*item);
 	    }
@@ -643,16 +689,16 @@ namespace mutils{
 	}
 
 
-	//Note: T is the type of the vector, not the vector's type parameter T
 	template<typename T>
 	context_ptr<type_check<is_pair,T> > from_bytes_noalloc(DeserializationManager* ctx, char const *v){
 		return context_ptr<T>{from_bytes<T>(ctx,v).release()};
 	}
 
+	//Note: T is the type of the vector, not the vector's type parameter T
 	template<typename T>
 	std::enable_if_t<is_vector<T>::value,std::unique_ptr<T> > from_bytes(DeserializationManager* ctx, char const * v){
 		using member = typename T::value_type;
-		if (std::is_pod<typename T::value_type>::value){
+		if (std::is_pod<member>::value){
 			member const * const start = (member*) (v + sizeof(int));
 			const int size = ((int*)v)[0];
 			return std::unique_ptr<T>{new T{start, start + size}};
@@ -663,7 +709,7 @@ namespace mutils{
 			int per_item_size = -1;
 			std::unique_ptr<std::vector<member> > accum{new T()};
 			for(int i = 0; i < size; ++i){
-				std::unique_ptr<member> item = from_bytes<typename T::value_type>(ctx,v2 + (i * per_item_size));
+				std::unique_ptr<member> item = from_bytes<member>(ctx,v2 + (i * per_item_size));
 				if (per_item_size == -1)
 					per_item_size = bytes_size(*item);
 				accum->push_back(*item);
@@ -679,6 +725,29 @@ namespace mutils{
 	}
 
 	
+	template<typename T>
+	std::enable_if_t<is_map<T>::value, std::unique_ptr<T>> from_bytes(DeserializationManager* ctx, char const* buffer) {
+	    using key_t = typename T::key_type;
+	    using value_t = typename T::mapped_type;
+        int size = ((int*) buffer)[0];
+	    const char* buf_ptr = buffer + sizeof(int);
+
+	    auto new_map = std::make_unique<T>();
+	    for(int i = 0; i < size; ++i) {
+	        context_ptr<key_t> key = from_bytes_noalloc<key_t>(ctx, buf_ptr);
+	        buf_ptr += bytes_size(*key);
+	        context_ptr<value_t> value = from_bytes_noalloc<value_t>(ctx, buf_ptr);
+	        buf_ptr += bytes_size(*value);
+	        new_map->emplace(*key, *value);
+	    }
+	    return std::move(new_map);
+	}
+
+    template<typename T>
+    context_ptr<type_check<is_map,T> > from_bytes_noalloc(DeserializationManager* ctx, char const *v){
+        return context_ptr<T>{from_bytes<T>(ctx,v).release()};
+    }
+
 	/**
 	   For Serializing and Deserializing many objects at once.
 	   The deserialization expects unique_ptr references; this
