@@ -538,6 +538,20 @@ namespace mutils{
 	std::unique_ptr<type_check<std::is_floating_point,T> > from_string(DeserializationManager*, char const *v, std::size_t length){
 		return std::make_unique<T>(std::stold(std::string{v,length}));
 	}
+
+	template<typename>
+	struct is_string : std::false_type {};
+
+	template<>
+	struct is_string<std::string> : std::true_type {};
+
+	template<>
+	struct is_string<const std::string> : std::true_type {};
+
+	template<typename T>
+	std::unique_ptr<type_check<is_string,T> > from_string(DeserializationManager*, char const *v, std::size_t length){
+		return std::make_unique<T>(std::string{v,length});
+	}
 	
 	//from_bytes definitions
 	template<typename T>
@@ -572,15 +586,6 @@ namespace mutils{
 
 	template<typename T, typename U>
 	struct is_pair<std::pair<T,U> > : std::true_type {};
-
-	template<typename>
-	struct is_string : std::false_type {};
-
-	template<>
-	struct is_string<std::string> : std::true_type {};
-
-	template<>
-	struct is_string<const std::string> : std::true_type {};
 	
 	template<typename>
     struct is_list : std::false_type {};
