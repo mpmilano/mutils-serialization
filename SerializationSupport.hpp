@@ -136,7 +136,14 @@ namespace mutils{
 		DeserializationManager(RemoteDeserialization_v rv):registered_v(rv){
 			for (auto &r : registered_v) r->this_mgr = this;
 		}
+		
 		DeserializationManager(const DeserializationManager&) = delete;
+		
+		DeserializationManager(DeserializationManager&& o)
+			:registered_v(std::move(o.registered_v))
+			{
+				for (auto &r : registered_v) r->this_mgr = this;
+			}
 
 		/**
 		 * Lookup the context registered at this DeserializationManager 
