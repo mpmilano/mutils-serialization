@@ -211,8 +211,10 @@ namespace mutils{
     /**
      * all of the elements of this vector, plus one int for the number of elements.
      */
-    template<typename T>
-    std::size_t bytes_size (const std::vector<T> &v){
+	std::size_t bytes_size (const std::vector<bool> &v);
+	
+	template<typename T>
+	std::size_t bytes_size (const std::vector<T> &v){
         if (std::is_pod<T>::value)
             return v.size() * bytes_size(v.back()) + sizeof(int);
         else {
@@ -363,7 +365,7 @@ namespace mutils{
 
 	template<typename T>
 	std::enable_if_t<std::is_pod<T>::value
-					 ,context_ptr<const std::decay_t<T> > > from_bytes_noalloc(DeserializationManager*, char const * const v);
+									 ,context_ptr<const std::decay_t<T> > > from_bytes_noalloc(DeserializationManager*, char const * const v, context_ptr<T> = context_ptr<T>{});
 
 	/**
 	 * Calls mutils::from_bytes_noalloc<T>(ctx,v), dereferences the result, and passes
@@ -439,7 +441,9 @@ namespace mutils{
 
 	//post_object definitions -- must come before to_bytes definitions that use them
 	void post_object(const std::function<void (char const * const, std::size_t)>& f, const std::string& str);
-
+	
+	void post_object(const std::function<void (char const * const, std::size_t)>& f, const std::vector<bool>& vec);
+	
 	template<typename T>
     void post_object(const std::function<void (char const * const, std::size_t)>& f, const std::vector<T>& vec){
         int size = vec.size();
@@ -505,6 +509,8 @@ namespace mutils{
         return sizeof(T);
     }
 
+	std::size_t to_bytes(const std::vector<bool> &vec, char* v);
+	
 	template<typename T>
 	std::size_t to_bytes(const std::vector<T> &vec, char* v){
 		auto size = bytes_size(vec);
@@ -549,6 +555,7 @@ namespace mutils{
 
 #ifndef NDEBUG
 	//ensure_registered definitions -- these could go anywhere since they don't depend on any other functions
+	void ensure_registered(const std::vector<bool>& v, DeserializationManager& dm);
 	template<typename T>
 	void ensure_registered(const std::vector<T>& v, DeserializationManager& dm){
 		for (auto &e : v) ensure_registered(e,dm);
@@ -613,14 +620,14 @@ namespace mutils{
 
 	template<typename T>
 	std::enable_if_t<std::is_pod<T>::value
-					 ,context_ptr<std::decay_t<T> > > from_bytes_noalloc(DeserializationManager*, char *v){
+					 ,context_ptr<std::decay_t<T> > > from_bytes_noalloc(DeserializationManager*, char *v, context_ptr<T> = context_ptr<T>{}){
 		using T2 = std::decay_t<T>;
 		return context_ptr<T2>{(T2*)v};
 	}
 
 	template<typename T>
 	std::enable_if_t<std::is_pod<T>::value
-					 ,context_ptr<const std::decay_t<T> > > from_bytes_noalloc(DeserializationManager*, char const * const v){
+					 ,context_ptr<const std::decay_t<T> > > from_bytes_noalloc(DeserializationManager*, char const * const v, context_ptr<T>){
 		using T2 = std::decay_t<T>;
 		return context_ptr<const T2>{(const T2*)v};
 	}
@@ -654,7 +661,7 @@ namespace mutils{
 	
 
 	template<typename T>
-	context_ptr<type_check<is_string,T> > from_bytes_noalloc(DeserializationManager*, char const *v){
+	context_ptr<type_check<is_string,T> > from_bytes_noalloc(DeserializationManager*, char const *v, context_ptr<T> = context_ptr<T>{}){
 		assert(v);
 		return context_ptr<T>(new std::string{v});
 	}
@@ -673,7 +680,7 @@ namespace mutils{
 	}
 
 	template<typename T>
-	context_ptr<type_check<is_set,T> > from_bytes_noalloc(DeserializationManager* ctx, char const *v){
+	context_ptr<type_check<is_set,T> > from_bytes_noalloc(DeserializationManager* ctx, char const *v, context_ptr<T> = context_ptr<T>{}){
 		return context_ptr<T>{from_bytes<T>(ctx,v).release()};
 	}
 
@@ -693,7 +700,7 @@ namespace mutils{
 	    const char* buf_ptr = buffer + sizeof(int);
 	    std::unique_ptr<std::list<elem>> return_list{new L()};
 	    for(int i = 0; i < size; ++i) {
-	        context_ptr<elem> item = from_bytes_noalloc<elem>(ctx, buf_ptr);
+				context_ptr<elem> item = from_bytes_noalloc<elem>(ctx, buf_ptr, context_ptr<elem>{});
 	        buf_ptr += bytes_size(*item);
 	        return_list->push_back(*item);
 	    }
@@ -702,15 +709,21 @@ namespace mutils{
 
 
 	template<typename T>
-	context_ptr<type_check<is_pair,T> > from_bytes_noalloc(DeserializationManager* ctx, char const *v){
+	context_ptr<type_check<is_pair,T> > from_bytes_noalloc(DeserializationManager* ctx, char const *v, context_ptr<T> = context_ptr<T>{}){
 		return context_ptr<T>{from_bytes<T>(ctx,v).release()};
 	}
 
+	template<typename T>
+	std::unique_ptr<T> boolvec_from_bytes(DeserializationManager* ctx, char const * v);
+	
 	//Note: T is the type of the vector, not the vector's type parameter T
 	template<typename T>
 	std::enable_if_t<is_vector<T>::value,std::unique_ptr<T> > from_bytes(DeserializationManager* ctx, char const * v){
 		using member = typename T::value_type;
-		if (std::is_pod<member>::value){
+		if (std::is_same<bool,member>::value){
+			return boolvec_from_bytes<T>(ctx,v);
+		}
+		else if (std::is_pod<member>::value && !std::is_same<bool,member>::value){
 			member const * const start = (member*) (v + sizeof(int));
 			const int size = ((int*)v)[0];
 			return std::unique_ptr<T>{new T{start, start + size}};
@@ -732,7 +745,7 @@ namespace mutils{
 
 
 	template<typename T>
-	context_ptr<type_check<is_vector,T> > from_bytes_noalloc(DeserializationManager* ctx, char const *v){
+	context_ptr<type_check<is_vector,T> > from_bytes_noalloc(DeserializationManager* ctx, char const *v, context_ptr<T> = context_ptr<T>{}){
 		return context_ptr<T>{from_bytes<T>(ctx,v).release()};
 	}
 
@@ -746,9 +759,9 @@ namespace mutils{
 
 	    auto new_map = std::make_unique<T>();
 	    for(int i = 0; i < size; ++i) {
-	        context_ptr<key_t> key = from_bytes_noalloc<key_t>(ctx, buf_ptr);
+				context_ptr<key_t> key = from_bytes_noalloc<key_t>(ctx, buf_ptr, context_ptr<key_t>{});
 	        buf_ptr += bytes_size(*key);
-	        context_ptr<value_t> value = from_bytes_noalloc<value_t>(ctx, buf_ptr);
+	        context_ptr<value_t> value = from_bytes_noalloc<value_t>(ctx, buf_ptr, context_ptr<value_t>{});
 	        buf_ptr += bytes_size(*value);
 	        new_map->emplace(*key, *value);
 	    }
@@ -756,7 +769,7 @@ namespace mutils{
 	}
 
     template<typename T>
-    context_ptr<type_check<is_map,T> > from_bytes_noalloc(DeserializationManager* ctx, char const *v){
+    context_ptr<type_check<is_map,T> > from_bytes_noalloc(DeserializationManager* ctx, char const *v, context_ptr<T> = context_ptr<T>{}){
         return context_ptr<T>{from_bytes<T>(ctx,v).release()};
     }
 
@@ -788,7 +801,7 @@ namespace mutils{
 	
 	template<typename T, typename... Rest>
 	std::size_t from_bytes_noalloc_v_nc(DeserializationManager *dsm, char * buf, context_ptr<T> &first, context_ptr<Rest>& ... rest){
-		first = from_bytes_noalloc<T>(dsm,buf);
+		first = from_bytes_noalloc<T>(dsm,buf,context_ptr<T>{});
 		auto size = bytes_size(*first);
 		return size + from_bytes_noalloc_v(dsm,buf + size,rest...);
 	}
@@ -800,7 +813,7 @@ namespace mutils{
 
 	template<typename T, typename... Rest>
 	std::size_t from_bytes_noalloc_v(DeserializationManager *dsm, char const * const buf, context_ptr<const T> &first, context_ptr<const Rest>& ... rest){
-		first = from_bytes_noalloc<T>(dsm,buf);
+		first = from_bytes_noalloc<T>(dsm,buf, context_ptr<T>{});
 		auto size = bytes_size(*first);
 		return size + from_bytes_noalloc_v(dsm,buf + size,rest...);
 	}
