@@ -132,7 +132,7 @@ namespace mutils{
 		 * class is shorter than or the same as those registered
 		 * contexts.
 		 */
-		const RemoteDeserialization_v registered_v;
+		RemoteDeserialization_v registered_v;
 		DeserializationManager(RemoteDeserialization_v rv):registered_v(rv){
 			for (auto &r : registered_v) r->this_mgr = this;
 		}
@@ -145,6 +145,11 @@ namespace mutils{
 				for (auto &r : registered_v) r->this_mgr = this;
 			}
 
+		DeserializationManager& register_ctx(RemoteDeserializationContext_p ctx){
+			registered_v.emplace_back(ctx);
+			return *this;
+		}
+
 		/**
 		 * Lookup the context registered at this DeserializationManager 
 		 * whose type is T.  Note this means we assume that types uniquely 
@@ -153,9 +158,8 @@ namespace mutils{
 		template<typename T>
 		T& mgr() {
 			for (auto& candidate : registered_v){
-				if (dynamic_cast<T*>(candidate))
-					return dynamic_cast<T&>(*candidate);
-				
+				if (auto *t = dynamic_cast<T*>(candidate))
+					return *t;
 			}
 			assert(false && "Error: no registered manager exists");
 			struct dead_code{}; throw dead_code{};
@@ -167,8 +171,8 @@ namespace mutils{
 		template<typename T>
 		const T& mgr() const {
 			for (auto& candidate : registered_v){
-				if (dynamic_cast<T*>(candidate))
-					return dynamic_cast<T&>(*candidate);
+				if (auto *t = dynamic_cast<T*>(candidate))
+					return t;
 			}
 			assert(false && "Error: no registered manager exists");
 			struct dead_code{}; throw dead_code{};
@@ -181,7 +185,7 @@ namespace mutils{
 		template<typename T>
 		bool registered() const {
 			for (auto& candidate : registered_v){
-                                if (dynamic_cast<T const *>(candidate))
+				if (dynamic_cast<T const *>(candidate))
 					return true;
 			}
 			return false;
