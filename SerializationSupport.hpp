@@ -216,11 +216,11 @@ namespace mutils{
 	template<typename T>
 	std::size_t bytes_size (const std::vector<T> &v){
         if (std::is_pod<T>::value)
-					return v.size() * bytes_size(v.back()) + sizeof(int) whendebug(+ bytes_size(type_name<std::vector<T> >()));
+					return v.size() * bytes_size(v.back()) + sizeof(int);
         else {
             int accum = 0;
             for (auto &e : v) accum += bytes_size(e);
-            return accum + sizeof(int) whendebug(+ bytes_size(type_name<std::vector<T> >()));
+            return accum + sizeof(int);
         }
     }
 
@@ -447,7 +447,6 @@ namespace mutils{
 	template<typename T>
     void post_object(const std::function<void (char const * const, std::size_t)>& f, const std::vector<T>& vec){
         int size = vec.size();
-				whendebug(post_object(f,type_name<std::vector<T> >()));
         f((char*)&size,sizeof(size));
         if (std::is_pod<T>::value){
             std::size_t size = vec.size() * bytes_size(vec.back());
@@ -721,16 +720,6 @@ namespace mutils{
 	template<typename T>
 	std::enable_if_t<is_vector<T>::value,std::unique_ptr<T> > from_bytes(DeserializationManager* ctx, char const * v){
 		using member = typename T::value_type;
-#ifndef NDEBUG
-		auto otherstr = from_bytes<std::string>(ctx,v);
-		if (*otherstr != type_name<T>()) {
-			std::cout << *otherstr << std::endl;
-			std::cout << std::endl;
-			std::cout << type_name<T>() << std::endl;
-		}
-		assert(*otherstr == type_name<T>());
-		v += bytes_size(*otherstr);
-#endif
 		if (std::is_same<bool,member>::value){
 			return boolvec_from_bytes<T>(ctx,v);
 		}
