@@ -728,6 +728,10 @@ namespace mutils{
 #ifndef NDEBUG
 		const static std::string typenonce = type_name<T>();
 		const auto typenonce_size = bytes_size(typenonce);
+		if (typenonce != v) {
+			std::cout << typenonce << std::endl << std::endl;
+			std::cout << v << std::endl;
+		}
 		assert(typenonce == v);
 		v += typenonce_size;
 #endif
