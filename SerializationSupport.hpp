@@ -734,6 +734,7 @@ namespace mutils{
 			std::cout << remote_string << std::endl;
 		}
 		assert(typenonce == v);
+		assert(typenonce == remote_string);
 		v += typenonce_size;
 #endif
 		using member = typename T::value_type;
