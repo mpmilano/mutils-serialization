@@ -132,7 +132,7 @@ namespace mutils{
 		 * class is shorter than or the same as those registered
 		 * contexts.
 		 */
-		const RemoteDeserialization_v registered_v;
+		RemoteDeserialization_v registered_v;
 		DeserializationManager(RemoteDeserialization_v rv):registered_v(rv){
 			for (auto &r : registered_v) r->this_mgr = this;
 		}
@@ -145,6 +145,11 @@ namespace mutils{
 				for (auto &r : registered_v) r->this_mgr = this;
 			}
 
+		DeserializationManager& register_ctx(RemoteDeserializationContext_p ctx){
+			registered_v.emplace_back(ctx);
+			return *this;
+		}
+
 		/**
 		 * Lookup the context registered at this DeserializationManager 
 		 * whose type is T.  Note this means we assume that types uniquely 
@@ -153,9 +158,8 @@ namespace mutils{
 		template<typename T>
 		T& mgr() {
 			for (auto& candidate : registered_v){
-				if (dynamic_cast<T*>(candidate))
-					return dynamic_cast<T&>(*candidate);
-				
+				if (auto *t = dynamic_cast<T*>(candidate))
+					return *t;
 			}
 			assert(false && "Error: no registered manager exists");
 			struct dead_code{}; throw dead_code{};
@@ -167,8 +171,8 @@ namespace mutils{
 		template<typename T>
 		const T& mgr() const {
 			for (auto& candidate : registered_v){
-				if (dynamic_cast<T*>(candidate))
-					return dynamic_cast<T&>(*candidate);
+				if (auto *t = dynamic_cast<T*>(candidate))
+					return t;
 			}
 			assert(false && "Error: no registered manager exists");
 			struct dead_code{}; throw dead_code{};
@@ -181,7 +185,7 @@ namespace mutils{
 		template<typename T>
 		bool registered() const {
 			for (auto& candidate : registered_v){
-                                if (dynamic_cast<T const *>(candidate))
+				if (dynamic_cast<T const *>(candidate))
 					return true;
 			}
 			return false;
@@ -215,12 +219,13 @@ namespace mutils{
 	
 	template<typename T>
 	std::size_t bytes_size (const std::vector<T> &v){
+		whendebug(static const auto typenonce_size = bytes_size(type_name<std::vector<T> >());)
         if (std::is_pod<T>::value)
-            return v.size() * bytes_size(v.back()) + sizeof(int);
+					return v.size() * bytes_size(v.back()) + sizeof(int) whendebug(+ typenonce_size);
         else {
             int accum = 0;
             for (auto &e : v) accum += bytes_size(e);
-            return accum + sizeof(int);
+            return accum + sizeof(int) whendebug(+ typenonce_size);
         }
     }
 
@@ -446,6 +451,7 @@ namespace mutils{
 	
 	template<typename T>
     void post_object(const std::function<void (char const * const, std::size_t)>& f, const std::vector<T>& vec){
+		whendebug(post_object(f,type_name<std::vector<T> >());)
         int size = vec.size();
         f((char*)&size,sizeof(size));
         if (std::is_pod<T>::value){
@@ -719,6 +725,18 @@ namespace mutils{
 	//Note: T is the type of the vector, not the vector's type parameter T
 	template<typename T>
 	std::enable_if_t<is_vector<T>::value,std::unique_ptr<T> > from_bytes(DeserializationManager* ctx, char const * v){
+#ifndef NDEBUG
+		const static std::string typenonce = type_name<T>();
+		const auto typenonce_size = bytes_size(typenonce);
+		auto remote_string = *from_bytes<std::string>(ctx,v);
+		if (typenonce != remote_string) {
+			std::cout << typenonce << std::endl << std::endl;
+			std::cout << remote_string << std::endl;
+		}
+		assert(typenonce == v);
+		assert(typenonce == remote_string);
+		v += typenonce_size;
+#endif
 		using member = typename T::value_type;
 		if (std::is_same<bool,member>::value){
 			return boolvec_from_bytes<T>(ctx,v);
