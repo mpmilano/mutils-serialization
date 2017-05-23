@@ -750,12 +750,11 @@ namespace mutils{
 		else{
 			int size = ((int*)v)[0];
 			auto* v2 = v + sizeof(int);
-			int per_item_size = -1;
+			std::size_t accumulated_offset = 0;
 			std::unique_ptr<std::vector<member> > accum{new T()};
 			for(int i = 0; i < size; ++i){
-				std::unique_ptr<member> item = from_bytes<member>(ctx,v2 + (i * per_item_size));
-				if (per_item_size == -1)
-					per_item_size = bytes_size(*item);
+				std::unique_ptr<member> item = from_bytes<member>(ctx,v2 + accumulated_offset);
+				accumulated_offset += bytes_size(*item);
 				accum->push_back(*item);
 			}
 			return accum;
