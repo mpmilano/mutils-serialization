@@ -4,7 +4,11 @@
 
 namespace mutils{
 
-
+/*
+  Intended as a way to alias C-style byte arrays for serialization.  Does not own its own memory; user
+  must ensure underlying array is not freed while Bytes lives, and is responsible for freeing 
+  underlying array when Bytes is destroyed.  
+ */
 	struct Bytes : public ByteRepresentable{
 		
 		char const * const bytes;
