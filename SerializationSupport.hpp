@@ -213,6 +213,14 @@ namespace mutils{
     std::size_t bytes_size(const std::string& b);
 
     /**
+     * sums the size of both pair elements
+     */
+    template<typename T, typename V>
+    std::size_t bytes_size (const std::pair<T,V>& pair){
+        return bytes_size(pair.first) + bytes_size(pair.second);
+    }
+
+    /**
      * all of the elements of this vector, plus one int for the number of elements.
      */
 	std::size_t bytes_size (const std::vector<bool> &v);
@@ -242,14 +250,6 @@ namespace mutils{
             for(const auto& e : list) accum += bytes_size(e);
             return accum + sizeof(int);
         }
-    }
-
-    /**
-     * sums the size of both pair elements
-     */
-    template<typename T, typename V>
-    std::size_t bytes_size (const std::pair<T,V> &pair){
-        return bytes_size(pair.first) + bytes_size(pair.second);
     }
 
     /**
@@ -447,6 +447,13 @@ namespace mutils{
 	//post_object definitions -- must come before to_bytes definitions that use them
 	void post_object(const std::function<void (char const * const, std::size_t)>& f, const std::string& str);
 	
+
+    template<typename T, typename V>
+    void post_object(const std::function<void (char const * const, std::size_t)>& f, const std::pair<T,V>& pair){
+        post_object(f,pair.first);
+        post_object(f,pair.second);
+    }
+
 	void post_object(const std::function<void (char const * const, std::size_t)>& f, const std::vector<bool>& vec);
 	
 	template<typename T>
@@ -481,12 +488,6 @@ namespace mutils{
         for (const auto &a : s){
             post_object(f,a);
         }
-    }
-
-    template<typename T, typename V>
-    void post_object(const std::function<void (char const * const, std::size_t)>& f, const std::pair<T,V>& pair){
-        post_object(f,pair.first);
-        post_object(f,pair.second);
     }
 
     template<typename K, typename V>
