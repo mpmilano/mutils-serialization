@@ -777,9 +777,9 @@ namespace mutils{
 
 	    auto new_map = std::make_unique<T>();
 	    for(int i = 0; i < size; ++i) {
-				context_ptr<key_t> key = from_bytes_noalloc<key_t>(ctx, buf_ptr, context_ptr<key_t>{});
+			auto key = from_bytes_noalloc<key_t>(ctx, buf_ptr, context_ptr<key_t>{});
 	        buf_ptr += bytes_size(*key);
-	        context_ptr<value_t> value = from_bytes_noalloc<value_t>(ctx, buf_ptr, context_ptr<value_t>{});
+	        auto value = from_bytes_noalloc<value_t>(ctx, buf_ptr, context_ptr<value_t>{});
 	        buf_ptr += bytes_size(*value);
 	        new_map->emplace(*key, *value);
 	    }
