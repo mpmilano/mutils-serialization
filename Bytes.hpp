@@ -1,6 +1,6 @@
 #pragma once
 #include "SerializationSupport.hpp"
-#include "connection.hpp"
+#include "../mutils-networking/connection.hpp"
 
 namespace mutils{
 
