@@ -16,20 +16,20 @@ bytes_size_begin = '    std::size_t bytes_size() const { \\\n'
 bytes_size_line_begin = '        return'
 bytes_size_line_part = ' mutils::bytes_size({field}) '
 bytes_size_line_end = '; \\\n'
-post_object_begin = '    void post_object(const std::function<void (char const * const, std::size_t)>&f ) const { \\\n'
-post_object_line =  '        mutils::post_object(f,{field}); \\\n'
+post_object_begin = '    void post_object(const std::function<void (char const * const, std::size_t)>& func ) const { \\\n'
+post_object_line =  '        mutils::post_object(func,{field}); \\\n'
 post_object_end =   '    } \n\n' # Ends both post_object and the macro definition
 deserialize_begin = '#define DEFAULT_DESERIALIZE{count}(Name,{args_list}) \\\n'
-from_bytes_begin = ('    static std::unique_ptr<Name> from_bytes(mutils::DeserializationManager* m, char const * buf){ \\\n'
-                    '        auto a_obj = mutils::from_bytes<std::decay_t<decltype(a)> >(m, buf); \\\n')
+from_bytes_begin = ('    static std::unique_ptr<Name> from_bytes(mutils::DeserializationManager* dsm, char const * buf){ \\\n'
+                    '        auto a_obj = mutils::from_bytes<std::decay_t<decltype(a)> >(dsm, buf); \\\n')
 declare_bytes_read = '        std::size_t bytes_read = mutils::bytes_size(*a_obj); \\\n'
-from_bytes_mid_field = ('        auto {field}_obj = mutils::from_bytes<std::decay_t<decltype({field})> >(m, buf + bytes_read); \\\n'
+from_bytes_mid_field = ('        auto {field}_obj = mutils::from_bytes<std::decay_t<decltype({field})> >(dsm, buf + bytes_read); \\\n'
                         '        bytes_read += mutils::bytes_size(*{field}_obj); \\\n')
-from_bytes_last_field = ('        auto {field}_obj = mutils::from_bytes<std::decay_t<decltype({field})> >(m, buf + bytes_read); \\\n'
+from_bytes_last_field = ('        auto {field}_obj = mutils::from_bytes<std::decay_t<decltype({field})> >(dsm, buf + bytes_read); \\\n'
                          '        return std::make_unique<Name>({obj_ptrs_list}, '
-                         '*(mutils::from_bytes<std::decay_t<decltype({last_field})> >(m, buf + bytes_read + mutils::bytes_size(*{field}_obj)))); \\\n')
+                         '*(mutils::from_bytes<std::decay_t<decltype({last_field})> >(dsm, buf + bytes_read + mutils::bytes_size(*{field}_obj)))); \\\n')
 from_bytes_one_field_return = '        return std::make_unique<Name>(*a_obj); \\\n'
-from_bytes_two_fields_return = '        return std::make_unique<Name>(*a_obj, *(mutils::from_bytes<std::decay_t<decltype(b)> >(m, buf + mutils::bytes_size(*a_obj)))); \\\n'
+from_bytes_two_fields_return = '        return std::make_unique<Name>(*a_obj, *(mutils::from_bytes<std::decay_t<decltype(b)> >(dsm, buf + mutils::bytes_size(*a_obj)))); \\\n'
 from_bytes_end = '    } \n\n' # Ends both from_bytes and the macro definition
 
 ### Comment block that goes at the top of the file ###
