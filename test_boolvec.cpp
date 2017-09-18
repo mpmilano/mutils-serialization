@@ -5,6 +5,12 @@ using namespace mutils;
 
 int main(){
 	std::vector<bool> b;
+	{
+		char buf[256];
+		to_bytes(b,buf);
+		assert(b == *from_bytes<std::vector<bool>>(nullptr,buf));
+		assert(mutils::bytes_size(b) == mutils::bytes_size(std::size_t{0}));
+	}
 	auto i = 0u;
 	while (better_rand() < .8 || i < 100) {
 		b.push_back(better_rand() > .5 ? true : false);
