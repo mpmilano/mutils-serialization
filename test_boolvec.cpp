@@ -1,0 +1,34 @@
+#include "SerializationSupport.hpp"
+#include <iostream>
+
+using namespace mutils;
+
+int main(){
+	std::vector<bool> b;
+	auto i = 0u;
+	while (better_rand() < .8 || i < 100) {
+		b.push_back(better_rand() > .5 ? true : false);
+		++i;
+	}
+	assert(b.size() > 5);
+	std::cout << b.size() << std::endl;
+	std::size_t canary;
+	canary = 471341890183081ul;
+	char data[b.size() * 2];
+	auto canary2 = canary;
+	assert(data);
+	bzero(data,b.size());
+	assert(canary == 471341890183081ul);
+	assert(canary2 == canary);
+	to_bytes(b,data);
+	assert(canary == 471341890183081ul);
+	assert(canary2 == canary);
+	std::cout << data << std::endl;
+	std::cout << (std::size_t) data << std::endl;
+	std::cout << "i am concerned" << std::endl;
+	assert(data);
+	assert(canary == 471341890183081ul);
+	canary = 348920;
+	auto newb = from_bytes<std::vector<bool> >(nullptr,data);
+	assert(*newb == b);
+}
