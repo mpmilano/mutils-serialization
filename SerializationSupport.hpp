@@ -515,8 +515,6 @@ namespace mutils{
 		(void)res;
         return sizeof(T);
     }
-
-	std::size_t to_bytes(const std::vector<bool> &vec, char* v);
 	
 	template<typename T>
 	std::size_t to_bytes(const std::vector<T> &vec, char* v){
