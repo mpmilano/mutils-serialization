@@ -21,17 +21,6 @@ namespace mutils {
 		return b.length() + 1;
 	}
 
-#ifndef NDEBUG
-	void ensure_registered(ByteRepresentable& b, DeserializationManager& dm){
-		b.ensure_registered(dm);
-	}
-#endif
-
-	context_ptr<marshalled>
-	marshalled::from_bytes_noalloc(DeserializationManager const * const, char* v) {
-		return context_ptr<marshalled>((marshalled*) v);
-	}
-
 	std::function<void (char const * const, std::size_t)> post_to_buffer(std::size_t &index, char * dest_buf){
 		return [&index,dest_buf](char const * const read_buf, std::size_t size){
 			memcpy(dest_buf + index, read_buf, size);
@@ -48,14 +37,6 @@ namespace mutils {
 	}
 
 	std::size_t to_bytes_v(char *){
-		return 0;
-	}
-	
-	std::size_t from_bytes_v(DeserializationManager *, char const * const ){
-		return 0;
-	}
-
-	std::size_t from_bytes_noalloc_v(DeserializationManager *, char const * const ){
 		return 0;
 	}
 
@@ -103,25 +84,6 @@ namespace mutils {
 		}
 	}
 
-	std::unique_ptr<std::vector<bool> > boolvec_from_bytes(DeserializationManager* dsm, char const * v){
-		const std::size_t real_size = *from_bytes_noalloc<std::size_t>(dsm,v);
-		v += bytes_size(real_size);
-		unsigned char* converted = (unsigned char*) v;
-		auto _ret = std::make_unique<std::vector<bool>>(real_size);
-		std::vector<bool> &ret = *_ret;
-		auto k = 0u;
-		auto j = 0u;
-		for (; j < real_size; ++k){
-			for(int i=0;i<8 && j < real_size;(i++, ++j))
-			{
-				ret[j] = converted[k] & (1 << i);
-			}
-		}
-		assert(j == real_size);
-		return _ret;
-	}
-#ifndef NDEBUG
-	void ensure_registered(const std::vector<bool>& v, DeserializationManager& dm);
-#endif
+
 
 }

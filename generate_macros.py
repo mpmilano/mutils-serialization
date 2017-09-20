@@ -20,7 +20,7 @@ post_object_begin = '    void post_object(const std::function<void (char const *
 post_object_line =  '        mutils::post_object(func,{field}); \\\n'
 post_object_end =   '    } \n\n' # Ends both post_object and the macro definition
 deserialize_begin = '#define DEFAULT_DESERIALIZE{count}(Name,{args_list}) \\\n'
-from_bytes_begin = ('    static std::unique_ptr<Name> from_bytes(mutils::DeserializationManager* dsm, char const * buf){ \\\n'
+from_bytes_begin = ('    template<typename... ctxs> static std::unique_ptr<Name> from_bytes(mutils::DeserializationManager<ctxs...>* dsm, char const * buf){ \\\n'
                     '        auto a_obj = mutils::from_bytes<std::decay_t<decltype(a)> >(dsm, buf); \\\n')
 declare_bytes_read = '        std::size_t bytes_read = mutils::bytes_size(*a_obj); \\\n'
 from_bytes_mid_field = ('        auto {field}_obj = mutils::from_bytes<std::decay_t<decltype({field})> >(dsm, buf + bytes_read); \\\n'
@@ -72,7 +72,7 @@ file_footer = r"""
 
 #define DEFAULT_SERIALIZATION_SUPPORT(CLASS_NAME,CLASS_MEMBERS...)		\
         DEFAULT_SERIALIZE(CLASS_MEMBERS) DEFAULT_DESERIALIZE(CLASS_NAME,CLASS_MEMBERS)   \
-    void ensure_registered(mutils::DeserializationManager&){}
+    template<typename... ctxs> void ensure_registered(mutils::DeserializationManager<ctxs...>&){}
 """
 
 

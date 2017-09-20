@@ -228,19 +228,19 @@
     } 
 
 #define DEFAULT_DESERIALIZE2(Name,a) \
-    static std::unique_ptr<Name> from_bytes(mutils::DeserializationManager* dsm, char const * buf){ \
+    template<typename... ctxs> static std::unique_ptr<Name> from_bytes(mutils::DeserializationManager<ctxs...>* dsm, char const * buf){ \
         auto a_obj = mutils::from_bytes<std::decay_t<decltype(a)> >(dsm, buf); \
         return std::make_unique<Name>(*a_obj); \
     } 
 
 #define DEFAULT_DESERIALIZE3(Name,a,b) \
-    static std::unique_ptr<Name> from_bytes(mutils::DeserializationManager* dsm, char const * buf){ \
+    template<typename... ctxs> static std::unique_ptr<Name> from_bytes(mutils::DeserializationManager<ctxs...>* dsm, char const * buf){ \
         auto a_obj = mutils::from_bytes<std::decay_t<decltype(a)> >(dsm, buf); \
         return std::make_unique<Name>(*a_obj, *(mutils::from_bytes<std::decay_t<decltype(b)> >(dsm, buf + mutils::bytes_size(*a_obj)))); \
     } 
 
 #define DEFAULT_DESERIALIZE4(Name,a,b,c) \
-    static std::unique_ptr<Name> from_bytes(mutils::DeserializationManager* dsm, char const * buf){ \
+    template<typename... ctxs> static std::unique_ptr<Name> from_bytes(mutils::DeserializationManager<ctxs...>* dsm, char const * buf){ \
         auto a_obj = mutils::from_bytes<std::decay_t<decltype(a)> >(dsm, buf); \
         std::size_t bytes_read = mutils::bytes_size(*a_obj); \
         auto b_obj = mutils::from_bytes<std::decay_t<decltype(b)> >(dsm, buf + bytes_read); \
@@ -248,7 +248,7 @@
     } 
 
 #define DEFAULT_DESERIALIZE5(Name,a,b,c,d) \
-    static std::unique_ptr<Name> from_bytes(mutils::DeserializationManager* dsm, char const * buf){ \
+    template<typename... ctxs> static std::unique_ptr<Name> from_bytes(mutils::DeserializationManager<ctxs...>* dsm, char const * buf){ \
         auto a_obj = mutils::from_bytes<std::decay_t<decltype(a)> >(dsm, buf); \
         std::size_t bytes_read = mutils::bytes_size(*a_obj); \
         auto b_obj = mutils::from_bytes<std::decay_t<decltype(b)> >(dsm, buf + bytes_read); \
@@ -258,7 +258,7 @@
     } 
 
 #define DEFAULT_DESERIALIZE6(Name,a,b,c,d,e) \
-    static std::unique_ptr<Name> from_bytes(mutils::DeserializationManager* dsm, char const * buf){ \
+    template<typename... ctxs> static std::unique_ptr<Name> from_bytes(mutils::DeserializationManager<ctxs...>* dsm, char const * buf){ \
         auto a_obj = mutils::from_bytes<std::decay_t<decltype(a)> >(dsm, buf); \
         std::size_t bytes_read = mutils::bytes_size(*a_obj); \
         auto b_obj = mutils::from_bytes<std::decay_t<decltype(b)> >(dsm, buf + bytes_read); \
@@ -270,7 +270,7 @@
     } 
 
 #define DEFAULT_DESERIALIZE7(Name,a,b,c,d,e,f) \
-    static std::unique_ptr<Name> from_bytes(mutils::DeserializationManager* dsm, char const * buf){ \
+    template<typename... ctxs> static std::unique_ptr<Name> from_bytes(mutils::DeserializationManager<ctxs...>* dsm, char const * buf){ \
         auto a_obj = mutils::from_bytes<std::decay_t<decltype(a)> >(dsm, buf); \
         std::size_t bytes_read = mutils::bytes_size(*a_obj); \
         auto b_obj = mutils::from_bytes<std::decay_t<decltype(b)> >(dsm, buf + bytes_read); \
@@ -284,7 +284,7 @@
     } 
 
 #define DEFAULT_DESERIALIZE8(Name,a,b,c,d,e,f,g) \
-    static std::unique_ptr<Name> from_bytes(mutils::DeserializationManager* dsm, char const * buf){ \
+    template<typename... ctxs> static std::unique_ptr<Name> from_bytes(mutils::DeserializationManager<ctxs...>* dsm, char const * buf){ \
         auto a_obj = mutils::from_bytes<std::decay_t<decltype(a)> >(dsm, buf); \
         std::size_t bytes_read = mutils::bytes_size(*a_obj); \
         auto b_obj = mutils::from_bytes<std::decay_t<decltype(b)> >(dsm, buf + bytes_read); \
@@ -300,7 +300,7 @@
     } 
 
 #define DEFAULT_DESERIALIZE9(Name,a,b,c,d,e,f,g,h) \
-    static std::unique_ptr<Name> from_bytes(mutils::DeserializationManager* dsm, char const * buf){ \
+    template<typename... ctxs> static std::unique_ptr<Name> from_bytes(mutils::DeserializationManager<ctxs...>* dsm, char const * buf){ \
         auto a_obj = mutils::from_bytes<std::decay_t<decltype(a)> >(dsm, buf); \
         std::size_t bytes_read = mutils::bytes_size(*a_obj); \
         auto b_obj = mutils::from_bytes<std::decay_t<decltype(b)> >(dsm, buf + bytes_read); \
@@ -318,7 +318,7 @@
     } 
 
 #define DEFAULT_DESERIALIZE10(Name,a,b,c,d,e,f,g,h,i) \
-    static std::unique_ptr<Name> from_bytes(mutils::DeserializationManager* dsm, char const * buf){ \
+    template<typename... ctxs> static std::unique_ptr<Name> from_bytes(mutils::DeserializationManager<ctxs...>* dsm, char const * buf){ \
         auto a_obj = mutils::from_bytes<std::decay_t<decltype(a)> >(dsm, buf); \
         std::size_t bytes_read = mutils::bytes_size(*a_obj); \
         auto b_obj = mutils::from_bytes<std::decay_t<decltype(b)> >(dsm, buf + bytes_read); \
@@ -338,7 +338,7 @@
     } 
 
 #define DEFAULT_DESERIALIZE11(Name,a,b,c,d,e,f,g,h,i,j) \
-    static std::unique_ptr<Name> from_bytes(mutils::DeserializationManager* dsm, char const * buf){ \
+    template<typename... ctxs> static std::unique_ptr<Name> from_bytes(mutils::DeserializationManager<ctxs...>* dsm, char const * buf){ \
         auto a_obj = mutils::from_bytes<std::decay_t<decltype(a)> >(dsm, buf); \
         std::size_t bytes_read = mutils::bytes_size(*a_obj); \
         auto b_obj = mutils::from_bytes<std::decay_t<decltype(b)> >(dsm, buf + bytes_read); \
@@ -360,7 +360,7 @@
     } 
 
 #define DEFAULT_DESERIALIZE12(Name,a,b,c,d,e,f,g,h,i,j,k) \
-    static std::unique_ptr<Name> from_bytes(mutils::DeserializationManager* dsm, char const * buf){ \
+    template<typename... ctxs> static std::unique_ptr<Name> from_bytes(mutils::DeserializationManager<ctxs...>* dsm, char const * buf){ \
         auto a_obj = mutils::from_bytes<std::decay_t<decltype(a)> >(dsm, buf); \
         std::size_t bytes_read = mutils::bytes_size(*a_obj); \
         auto b_obj = mutils::from_bytes<std::decay_t<decltype(b)> >(dsm, buf + bytes_read); \
@@ -411,4 +411,4 @@
 
 #define DEFAULT_SERIALIZATION_SUPPORT(CLASS_NAME,CLASS_MEMBERS...)		\
         DEFAULT_SERIALIZE(CLASS_MEMBERS) DEFAULT_DESERIALIZE(CLASS_NAME,CLASS_MEMBERS)   \
-    void ensure_registered(mutils::DeserializationManager&){}
+    template<typename... ctxs> void ensure_registered(mutils::DeserializationManager<ctxs...>&){}

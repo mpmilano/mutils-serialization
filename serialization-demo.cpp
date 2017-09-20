@@ -15,7 +15,7 @@ struct TestSerialization : public ByteRepresentable{
 };
 
 int main(){
-	DeserializationManager dsm{{}};
+	DeserializationManager<> dsm;
 	{
 		int i = 3;
 		auto size = bytes_size(i);

@@ -31,16 +31,18 @@ namespace mutils{
 			f((char*)&size,sizeof(size));
 			f(bytes,size);
 		}
-		
-		void ensure_registered(DeserializationManager&){}
+
+		template<typename... ctxs>
+		void ensure_registered(DeserializationManager<ctxs...>&){}
 
 		//from_bytes is disabled in this implementation, because it's intended only for nocopy-aware scenarios
 		template<typename T, typename V>
 		static std::unique_ptr<Bytes> from_bytes(T*, V*){
 			static_assert(std::is_same<T,V>::value,"Error: from_bytes disabled for mutils::Bytes. See comment in source.");
 		}
-		
-		static context_ptr<Bytes> from_bytes_noalloc(DeserializationManager *, char const * const v)  {
+
+		template<typename... ctxs>
+		static context_ptr<Bytes> from_bytes_noalloc(DeserializationManager<ctxs...> *, char const * const v)  {
 			return context_ptr<Bytes>{new Bytes(v + sizeof(std::size_t),((std::size_t*)(v))[0])};
 		}
 
