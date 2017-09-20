@@ -98,11 +98,15 @@ namespace mutils{
 	protected:
 		virtual std::size_t serial_uuid() const = 0;
 		virtual std::size_t to_bytes(char *) const = 0;
+		virtual std::size_t bytes_size() const = 0;
 	public:
 		std::size_t inherit_to_bytes(char* v) const {
 			((std::size_t*) v)[0] = serial_uuid();
 			v += sizeof(std::size_t);
 			return sizeof(std::size_t) + to_bytes(v);
+		}
+		std::size_t inherit_bytes_size() const {
+			return sizeof(std::size_t) + bytes_size();
 		}
 		virtual ~InheritByteRepresentable() = default;
 	};
