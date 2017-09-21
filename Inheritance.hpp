@@ -3,6 +3,9 @@
 #include "SerializationSupport.hpp"
 
 namespace mutils{
+
+	struct InheritMissException{
+	};
 	
 	template <typename super, typename sub, std::size_t id>
 	struct InheritPair{
@@ -22,6 +25,16 @@ namespace mutils{
 				(void) _id;
 				return nullptr;
 			}
+		}
+
+		template<typename F> static auto run_on_match(const F& f, super& sup, std::size_t _id){
+			if (_id == id)
+				return f(dynamic_cast<sub&>(sub));
+			else throw InheritMissException{};
+		}
+
+		template<typename sup_cand> static bool matches(sup_cand& sup, std::size_t _id){
+			return std::is_same<sup_cand,super>::value && _id == id;
 		}
 
 		template<typename T> using matches_sub = std::conditional_t<std::is_same<T,sub>::value, InheritPair, mismatch>;
@@ -72,6 +85,31 @@ namespace mutils{
 			}
 		}
 		
+		template<typename F, typename sup_cand> static auto run_on_match(const F& f, sup_cand& sup, std::size_t _id){
+			constexpr sup_cand* choice{nullptr};
+			if constexpr(super_matches(choice)){
+					return concretized(choice).run_on_match(f,sup,_id);
+				}
+			else {
+				(void) f;
+				(void) sup;
+				(void) _id;
+				throw InheritMissException{};
+			}
+		}
+
+		template<typename sup_cand> static bool matches(sup_cand& sup, std::size_t _id){
+			constexpr sup_cand* choice{nullptr};
+			if constexpr(super_matches(choice)){
+					return concretized(choice).matches(sup,_id);
+				}
+			else {
+				(void) sup;
+				(void) _id;
+				return false;
+			}
+		}
+		
 	};
 
 	constexpr auto pick_non_null(){
@@ -96,8 +134,10 @@ namespace mutils{
 		return pick_non_null(t...);
 	}
 
+	struct InheritManager{};
+
 	template<typename... pairs>
-	struct InheritGroup : public RemoteDeserializationContext{
+	struct InheritGroup : public RemoteDeserializationContext, public InheritManager{
 
 		template<typename super, typename sub, std::size_t it>
 		using add_relationship = InheritGroup<pairs...,InheritPair<super,sub,it> >;
@@ -114,6 +154,27 @@ namespace mutils{
 			std::size_t id = ((std::size_t*)_v)[0];
 			auto *v = _v + sizeof(std::size_t);
 			return std::unique_ptr<T>{pick_non_null(pairs::template inherit_from_bytes<T>(dsm,v,id)...)};
+		}
+
+	private:
+		template<typename F, typename super>
+		static auto run_on_match_fold(const F&, super&, std::size_t){
+			throw InheritMissException{};
+		}
+		template<typename F, typename super, typename fstpair, typename... _pairs>
+		static auto run_on_match_fold(const F& f, super& sup, std::size_t id){
+			if constexpr (!std::is_void<fstpair::run_on_match(f,sup,id)>::value ) {
+					if (fstpair::matches(sup,id)){
+						return fstpair::run_on_match(sup,id);
+					}
+					else return run_on_match_fold<F,super,_pairs...>(f,sup,id);
+				}			
+		}
+	public:
+
+		template<typename F, typename super>
+		static auto run_on_match(const F& f, super& sup, std::size_t id){
+			return run_on_match_fold<F,super,pairs...>(f,sup,id);
 		}
 
 		InheritGroup(const InheritGroup&){}
