@@ -13,7 +13,7 @@ namespace mutils{
 		template<typename T, typename... ctxs>
 		static auto inherit_from_bytes(DeserializationManager<ctxs...> *dsm, char const * const v, std::size_t _id){
 			if constexpr (std::is_same<T,super>::value){
-					super* ret = (id == _id ? from_bytes<sub>(dsm,v).release() : (sub*)nullptr);
+					super* ret = (id == _id ? sub::from_bytes(dsm,v).release() : (sub*)nullptr);
 					return ret;
 				}
 			else {

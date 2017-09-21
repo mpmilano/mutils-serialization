@@ -116,8 +116,14 @@ namespace mutils{
 	 * context, then you can not use this at all and just pass null
 	 * to from_bytes* in place of this.
 	 */
-	template<typename... DeserializationContexts>
-	struct DeserializationManager : public DeserializationContextHolder<DeserializationContexts>...{
+	template<typename... DeserializationContexts> struct DeserializationManager;
+
+	template<> struct DeserializationManager<>{
+		template<typename> constexpr static bool contains_mgr() {return false;}
+		template<typename> constexpr static auto _mgr() { return mismatch{};}
+	};
+	template<typename CT1, typename... DeserializationContexts>
+	struct DeserializationManager<CT1, DeserializationContexts...> : public DeserializationContextHolder<CT1>, public DeserializationManager<DeserializationContexts...>{
 
 		/**
 		 * Various registered managers. Please note that this class
@@ -126,8 +132,9 @@ namespace mutils{
 		 * class is shorter than or the same as those registered
 		 * contexts.
 		 */
-		DeserializationManager(DeserializationContexts*... ptrs):
-			DeserializationContextHolder<DeserializationContexts>(ptrs)...{}
+		using DeserializationContextHolder<CT1>::holder;
+		DeserializationManager(CT1* ptr1, DeserializationContexts*... ptrs):
+			DeserializationContextHolder<CT1>(ptr1),DeserializationManager<DeserializationContexts...>(ptrs...){}
 		
 		DeserializationManager(const DeserializationManager&) = delete;
 		
@@ -139,8 +146,14 @@ namespace mutils{
 		 * identify contexts. 
 		 */
 		template<typename T>
+		static auto _mgr() {
+			return find_match_if_exists<typename DeserializationContextHolder<CT1>::template match<T>,
+																	remove_ptr<DECT(DeserializationManager<DeserializationContexts...>::template _mgr<T>())> > ();
+		}
+
+		template<typename T>
 		T& mgr() {
-			return *DECT(*find_match<typename DeserializationContextHolder<DeserializationContexts>::template match<T>...>())::holder;
+			return *DECT(*_mgr<T>())::holder;
 		}
 
 		/**
@@ -148,7 +161,12 @@ namespace mutils{
 		 */
 		template<typename T>
 		T& mgr() const {
-			return *DECT(*find_match<typename DeserializationContextHolder<DeserializationContexts>::template match<T>...>())::holder;
+			return *DECT(*_mgr<T>())::holder;
+		}
+
+		template<typename T>
+		constexpr static bool contains_mgr(){
+			return (!std::is_same<mutils::mismatch,typename DeserializationContextHolder<DeserializationContexts>::template match<T> >::value || ...);
 		}
 	};
 
@@ -284,7 +302,7 @@ namespace mutils{
 	 * std::string and stores it in v
 	 */
 	std::size_t to_bytes(const std::string& b, char* v);
-
+	
 	/**
 	 * Calls T::from_bytes(ctx,v) when T is a ByteRepresentable. 
 	 * uses std::memcpy() when T is a POD.  
@@ -871,6 +889,12 @@ namespace mutils{
 	auto deserialize_and_run(DeserializationManager<ctxs...>* dsm, char * v, const F& fun){
 		using fun_t = std::decay_t<decltype(convert(fun))>;
 		return deserialize_and_run<F>(dsm,v,fun,(fun_t*) nullptr);
+	}
+
+	template<typename T>
+	auto from_bytes(std::nullptr_t, char const * v){
+		constexpr DeserializationManager<>* np{nullptr};
+		return from_bytes<T>(np,v);
 	}
 
 }
