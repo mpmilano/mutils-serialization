@@ -16,7 +16,12 @@ namespace mutils{
 					super* ret = (id == _id ? from_bytes<sub>(dsm,v).release() : (sub*)nullptr);
 					return ret;
 				}
-			else return nullptr;
+			else {
+				(void) dsm;
+				(void) v;
+				(void) _id;
+				return nullptr;
+			}
 		}
 
 		template<typename T> using matches_sub = std::conditional_t<std::is_same<T,sub>::value, InheritPair, mismatch>;
@@ -57,9 +62,14 @@ namespace mutils{
 		static auto inherit_from_bytes(DeserializationManager<ctxs...> *dsm, char const * const v, std::size_t _id){
 			constexpr T* choice{nullptr};
 			if constexpr(super_matches(choice)){
-					return concretized(choice).template inherit_from_bytes<T>(dsm,_id);
+					return concretized(choice).template inherit_from_bytes<T>(dsm,v,_id);
 				}
-			else return nullptr;
+			else {
+				(void) dsm;
+				(void) v;
+				(void) _id;
+				return nullptr;
+			}
 		}
 		
 	};
@@ -73,13 +83,16 @@ namespace mutils{
 		return t;
 	}
 
+	template<typename... T>
+	constexpr auto pick_non_null(std::nullptr_t, T... t);
+
 	template<typename T1, typename... T>
-	auto pick_non_null(T1* t1, T*... t){
+	auto pick_non_null(T1* t1, T... t){
 		return (t1 ? t1 : pick_non_null(t...));
 	}
 
 	template<typename... T>
-	constexpr auto pick_non_null(std::nullptr_t, T*... t){
+	constexpr auto pick_non_null(std::nullptr_t, T... t){
 		return pick_non_null(t...);
 	}
 
