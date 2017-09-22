@@ -166,7 +166,9 @@ namespace mutils{
 
 		template<typename T>
 		constexpr static bool contains_mgr(){
-			return (!std::is_same<mutils::mismatch,typename DeserializationContextHolder<DeserializationContexts>::template match<T> >::value || ...);
+			constexpr auto ret = !(std::is_same<mutils::mismatch,typename DeserializationContextHolder<DeserializationContexts>::template match<T> >::value
+														 && ... && std::is_same<mutils::mismatch,typename DeserializationContextHolder<CT1>::template match<T> >::value);
+			return ret;
 		}
 	};
 
