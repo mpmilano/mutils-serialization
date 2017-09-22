@@ -23,22 +23,25 @@ namespace mutils{
 				(void) dsm;
 				(void) v;
 				(void) _id;
+				assert(id != _id);
 				return nullptr;
 			}
 		}
 
 		template<typename F> static auto run_on_match(const F& f, super& sup, std::size_t _id){
 			if (_id == id)
-				return f(dynamic_cast<sub&>(sub));
+				return f(dynamic_cast<sub&>(sup));
 			else throw InheritMissException{};
 		}
 
-		template<typename sup_cand> static bool matches(sup_cand& sup, std::size_t _id){
+		template<typename sup_cand> static bool matches(sup_cand& , std::size_t _id){
+			assert((id != _id || std::is_same<sup_cand,super>::value));
 			return std::is_same<sup_cand,super>::value && _id == id;
 		}
 
-		template<typename T> using matches_sub = std::conditional_t<std::is_same<T,sub>::value, InheritPair, mismatch>;
-		template<typename T> using matches_super = std::conditional_t<std::is_same<T,super>::value, InheritPair, mismatch>;
+		template<typename sup_cand> static constexpr bool possible_match(){
+			return std::is_same<sup_cand,super>::value;
+		}
 	};
 
 	template <template<typename> class super, template<typename> class sub, std::size_t id>
@@ -81,6 +84,7 @@ namespace mutils{
 				(void) dsm;
 				(void) v;
 				(void) _id;
+				assert(id != _id);
 				return nullptr;
 			}
 		}
@@ -94,6 +98,7 @@ namespace mutils{
 				(void) f;
 				(void) sup;
 				(void) _id;
+				assert(id != _id);
 				throw InheritMissException{};
 			}
 		}
@@ -106,32 +111,38 @@ namespace mutils{
 			else {
 				(void) sup;
 				(void) _id;
+				assert(id != _id);
+				return false;
+			}
+		}
+
+		template<typename sup_cand> static constexpr bool possible_match(){
+			constexpr sup_cand* choice{nullptr};
+			if constexpr(super_matches(choice)){
+					return concretized(choice).template possible_match<sup_cand>();
+				}
+			else {
 				return false;
 			}
 		}
 		
 	};
-
-	constexpr auto pick_non_null(){
-		return nullptr;
-	}
 	
-	template<typename T>
-	constexpr auto pick_non_null(T* t){
-		return t;
-	}
-
 	template<typename... T>
 	constexpr auto pick_non_null(std::nullptr_t, T... t);
 
 	template<typename T1, typename... T>
 	auto pick_non_null(T1* t1, T... t){
-		return (t1 ? t1 : pick_non_null(t...));
+		if constexpr ((std::is_null_pointer<T>::value && ... && true)){
+				return t1;
+			}
+		else return (t1 ? t1 : pick_non_null(t...));
 	}
 
 	template<typename... T>
 	constexpr auto pick_non_null(std::nullptr_t, T... t){
-		return pick_non_null(t...);
+		if constexpr (sizeof...(T) > 0) return pick_non_null(t...);
+		else return nullptr;
 	}
 
 	struct InheritManager{};
@@ -157,21 +168,32 @@ namespace mutils{
 		}
 
 	private:
-		template<typename F, typename super>
-		static auto run_on_match_fold(const F&, super&, std::size_t){
+		template<typename RET, typename F, typename super>
+		static RET run_on_match_fold(const F&, super&, std::size_t){
 			throw InheritMissException{};
 		}
+		
 		template<typename F, typename super, typename fstpair, typename... _pairs>
 		static auto run_on_match_fold(const F& f, super& sup, std::size_t id){
-			if constexpr (!std::is_void<fstpair::run_on_match(f,sup,id)>::value ) {
+			if constexpr (!std::is_void<DECT(fstpair::run_on_match(f,sup,id))>::value ) {
+					using RET = decltype(fstpair::run_on_match(f,sup,id));
 					if (fstpair::matches(sup,id)){
-						return fstpair::run_on_match(sup,id);
+						return fstpair::run_on_match(f,sup,id);
 					}
-					else return run_on_match_fold<F,super,_pairs...>(f,sup,id);
+					else return InheritGroup::run_on_match_fold<RET,F,super,_pairs...>(f,sup,id);
 				}			
+		}
+		template<typename RET, typename F, typename super, typename fstpair, typename... _pairs>
+		static RET run_on_match_fold(const F& f, super& sup, std::size_t id){
+			return run_on_match_fold<F,super,fstpair,_pairs...>(f,sup,id);
 		}
 	public:
 
+		template<typename super>
+		static constexpr auto contains_possible_match(){
+			return (pairs::template possible_match<super>() || ... || false);
+		}
+		
 		template<typename F, typename super>
 		static auto run_on_match(const F& f, super& sup, std::size_t id){
 			return run_on_match_fold<F,super,pairs...>(f,sup,id);

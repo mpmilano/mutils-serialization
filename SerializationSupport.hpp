@@ -152,7 +152,7 @@ namespace mutils{
 		}
 
 		template<typename T>
-		T& mgr() {
+		auto& mgr() {
 			return *DECT(*_mgr<T>())::holder;
 		}
 
@@ -160,7 +160,7 @@ namespace mutils{
 		 * As the above, but const. 
 		 */
 		template<typename T>
-		T& mgr() const {
+		auto& mgr() const {
 			return *DECT(*_mgr<T>())::holder;
 		}
 
