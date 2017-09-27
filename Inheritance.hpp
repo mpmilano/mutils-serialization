@@ -5,6 +5,8 @@
 namespace mutils{
 
 	struct InheritMissException{
+		const std::size_t id;
+		char const * const buffer_after_id;
 	};
 	
 	template <typename super, typename sub, std::size_t id>
@@ -164,7 +166,9 @@ namespace mutils{
 		static std::unique_ptr<T> inherit_from_bytes(DeserializationManager<ctxs...>* dsm, char const * const _v){
 			std::size_t id = ((std::size_t*)_v)[0];
 			auto *v = _v + sizeof(std::size_t);
-			return std::unique_ptr<T>{pick_non_null(pairs::template inherit_from_bytes<T>(dsm,v,id)...)};
+			auto ret = std::unique_ptr<T>{pick_non_null(pairs::template inherit_from_bytes<T>(dsm,v,id)...)};
+			if (ret) return ret;
+			else throw InheritMissException{id, v};
 		}
 
 	private:
