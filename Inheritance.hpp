@@ -177,20 +177,25 @@ namespace mutils{
 			throw InheritMissException{};
 		}
 		
-		template<typename F, typename super, typename fstpair, typename... _pairs>
-		static auto run_on_match_fold(const F& f, super& sup, std::size_t id){
-			if constexpr (!std::is_void<DECT(fstpair::run_on_match(f,sup,id))>::value ) {
-					using RET = decltype(fstpair::run_on_match(f,sup,id));
+		template<typename RET, typename F, typename super, typename fstpair, typename... _pairs>
+		static RET run_on_match_fold(const F& f, super& sup, std::size_t id){
+			if constexpr (fstpair::template possible_match<super>()){
 					if (fstpair::matches(sup,id)){
 						return fstpair::run_on_match(f,sup,id);
 					}
-					else return InheritGroup::run_on_match_fold<RET,F,super,_pairs...>(f,sup,id);
-				}			
+				}
+			return InheritGroup::run_on_match_fold<RET,F,super,_pairs...>(f,sup,id);
 		}
-		template<typename RET, typename F, typename super, typename fstpair, typename... _pairs>
-		static RET run_on_match_fold(const F& f, super& sup, std::size_t id){
-			return run_on_match_fold<F,super,fstpair,_pairs...>(f,sup,id);
+
+		template<typename F, typename super, typename fstpair, typename... _pairs>
+		static auto run_on_match_fold(const F& f, super& sup, std::size_t id){
+			if constexpr (fstpair::template possible_match<super>()){
+					using RET = decltype(fstpair::run_on_match(f,sup,id));
+					return run_on_match_fold<RET,F,super,fstpair,_pairs...>(f,sup,id);
+				}
+			else return InheritGroup::run_on_match_fold<F,super,_pairs...>(f,sup,id);
 		}
+		
 	public:
 
 		template<typename super>
