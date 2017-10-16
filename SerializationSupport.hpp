@@ -445,6 +445,7 @@ namespace mutils{
 	
 	template<typename T>
     void post_object(const std::function<void (char const * const, std::size_t)>& f, const std::vector<T>& vec){
+		static_assert(!std::is_same<T,bool>::value);
 		whendebug(post_object(f,type_name<std::vector<T> >());)
         int size = vec.size();
         f((char*)&size,sizeof(size));

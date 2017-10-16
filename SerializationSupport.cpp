@@ -47,7 +47,7 @@ namespace mutils {
 	//vector of bool, my nemisis.
 	std::size_t bytes_size (const std::vector<bool> &vec){
 		const std::size_t real_size = vec.size();
-		return bytes_size(real_size) + 8*boolvec_adjust_size_down(real_size);
+		return bytes_size(real_size) + boolvec_adjust_size_down(real_size);
 	}
 
 	auto make_compact_vector(const std::vector<bool>& vec){
