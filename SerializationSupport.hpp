@@ -696,7 +696,7 @@ namespace mutils{
 	    const char* buf_ptr = buffer + sizeof(int);
 	    std::unique_ptr<std::list<elem>> return_list{new L()};
 	    for(int i = 0; i < size; ++i) {
-				context_ptr<elem> item = from_bytes_noalloc<elem>(ctx, buf_ptr, context_ptr<elem>{});
+				auto item = from_bytes_noalloc<elem>(ctx, buf_ptr, context_ptr<elem>{});
 	        buf_ptr += bytes_size(*item);
 	        return_list->push_back(*item);
 	    }
