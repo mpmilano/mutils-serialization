@@ -1,4 +1,5 @@
 #pragma once
+#include "../mutils/macro_utils.hpp"
 
 /**
  * This is an automatically-generated file that implements default serialization

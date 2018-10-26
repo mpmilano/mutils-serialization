@@ -6,6 +6,7 @@ OUTPUT_FILENAME = 'SerializationMacros.hpp'
 
 ### Boilerplate Code Templates ###
 pragma_once = '#pragma once\n'
+include_header = '#include {path}\n'
 serialize_begin =      '#define DEFAULT_SERIALIZE{count}({args_list}) std::size_t to_bytes(char* ret) const {{ \\\n'
 to_bytes_first_line =  '        int bytes_written = mutils::to_bytes(a,ret);  \\\n'
 to_bytes_middle_line = '        bytes_written += mutils::to_bytes({field},ret + bytes_written); \\\n'
@@ -85,6 +86,7 @@ args = argparser.parse_args()
 
 with open(OUTPUT_FILENAME, 'w') as output:
     output.write(pragma_once) 
+    output.write(include_header.format(path='"../mutils/macro_utils.hpp"'))
     output.write(header_comments)
     # First, generate the serializers
     for curr_num_fields in range(1,args.num_fields+1):
