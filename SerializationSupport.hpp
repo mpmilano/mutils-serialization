@@ -1,11 +1,11 @@
 #pragma once
-#include "../mutils/mutils.hpp"
-#include "../mutils/type_utils.hpp"
+#include "mutils/mutils.hpp"
+#include "mutils/type_utils.hpp"
 #include "SerializationMacros.hpp"
 #include "context_ptr.hpp"
-#include "../mutils/macro_utils.hpp"
-#include "../mutils/17_type_utils.hpp"
-#include "../mutils/typelist.hpp"
+#include "mutils/macro_utils.hpp"
+#include "mutils/17_type_utils.hpp"
+#include "mutils/typelist.hpp"
 #include <vector>
 #include <cstring>
 
@@ -175,7 +175,7 @@ namespace mutils{
 	/**
      * Just calls sizeof(T)
      */
-    template<typename T, restrict2(std::is_pod<T>::value)>
+    template<typename T, restrict2((std::is_standard_layout<T>::value && std::is_trivial<T>::value))>
     auto bytes_size(const T&){
         return sizeof(T);
     }
@@ -208,7 +208,7 @@ namespace mutils{
 	template<typename T>
 	std::size_t bytes_size (const std::vector<T> &v){
 		whendebug(static const auto typenonce_size = bytes_size(type_name<std::vector<T> >());)
-        if (std::is_pod<T>::value)
+        if ((std::is_standard_layout<T>::value && std::is_trivial<T>::value))
 					return v.size() * bytes_size(v.back()) + sizeof(int) whendebug(+ typenonce_size);
         else {
             int accum = 0;
@@ -223,7 +223,7 @@ namespace mutils{
      */
     template<typename T>
     std::size_t bytes_size(const std::list<T>& list) {
-        if(std::is_pod<T>::value)
+        if((std::is_standard_layout<T>::value && std::is_trivial<T>::value))
             return list.size() * bytes_size(list.back()) + sizeof(int);
         else {
             int accum = 0;
@@ -286,7 +286,7 @@ namespace mutils{
 	 * Calls b.ensure_registered(dm) when b is a ByteRepresentable;
 	 * returns true when b is POD.
 	 */
-	template<typename T, typename DSM, restrict(std::is_pod<T>::value)>
+	template<typename T, typename DSM, restrict((std::is_standard_layout<T>::value && std::is_trivial<T>::value))>
 	void ensure_registered(const T&, DSM&){}
 #endif
 
@@ -322,7 +322,7 @@ namespace mutils{
 	 * custom logic is implemented for some STL types.
 	 */
 	template<typename T, typename... ctxs>
-	std::enable_if_t<std::is_pod<T>::value
+	std::enable_if_t<(std::is_standard_layout<T>::value && std::is_trivial<T>::value)
 									 ,std::unique_ptr<std::decay_t<T> > > from_bytes(DeserializationManager<ctxs...>*, char const *v);
 	
 	/**
@@ -348,11 +348,11 @@ namespace mutils{
 	 */
 
 	template<typename T, typename... ctxs>
-	std::enable_if_t<std::is_pod<T>::value
+	std::enable_if_t<(std::is_standard_layout<T>::value && std::is_trivial<T>::value)
 									 ,context_ptr<std::decay_t<T> > > from_bytes_noalloc(DeserializationManager<ctxs...>*, char *v);
 
 	template<typename T, typename... ctxs>
-	std::enable_if_t<std::is_pod<T>::value
+	std::enable_if_t<(std::is_standard_layout<T>::value && std::is_trivial<T>::value)
 									 ,context_ptr<const std::decay_t<T> > > from_bytes_noalloc(DeserializationManager<ctxs...>*, char const * const v, context_ptr<T> = context_ptr<T>{});
 
 	/**
@@ -449,7 +449,7 @@ namespace mutils{
 		whendebug(post_object(f,type_name<std::vector<T> >());)
         int size = vec.size();
         f((char*)&size,sizeof(size));
-        if (std::is_pod<T>::value){
+        if ((std::is_standard_layout<T>::value && std::is_trivial<T>::value)){
             std::size_t size = vec.size() * bytes_size(vec.back());
             f((char*) vec.data(), size);
         }
@@ -496,7 +496,7 @@ namespace mutils{
     /**
      * Special to_bytes for POD types, which just uses memcpy
      */
-    template<typename T, restrict(std::is_pod<T>::value)>
+    template<typename T, restrict((std::is_standard_layout<T>::value && std::is_trivial<T>::value))>
     std::size_t to_bytes(const T &t, char* v){
         auto res = std::memcpy(v,&t,sizeof(T));
         assert(res);
@@ -603,7 +603,7 @@ namespace mutils{
 	
 	//from_bytes definitions
 	template<typename T, typename... ctxs>
-	std::enable_if_t<std::is_pod<T>::value
+	std::enable_if_t<(std::is_standard_layout<T>::value && std::is_trivial<T>::value)
 					 ,std::unique_ptr<std::decay_t<T> > > from_bytes(DeserializationManager<ctxs...>*, char const *v){
 		using T2 = std::decay_t<T>;
 		if (v) {
@@ -615,14 +615,14 @@ namespace mutils{
 	}
 
 	template<typename T, typename... ctxs>
-	std::enable_if_t<std::is_pod<T>::value
+	std::enable_if_t<(std::is_standard_layout<T>::value && std::is_trivial<T>::value)
 					 ,context_ptr<std::decay_t<T> > > from_bytes_noalloc(DeserializationManager<ctxs...>*, char *v, context_ptr<T> = context_ptr<T>{}){
 		using T2 = std::decay_t<T>;
 		return context_ptr<T2>{(T2*)v};
 	}
 
 	template<typename T, typename... ctxs>
-	std::enable_if_t<std::is_pod<T>::value
+	std::enable_if_t<(std::is_standard_layout<T>::value && std::is_trivial<T>::value)
 					 ,context_ptr<const std::decay_t<T> > > from_bytes_noalloc(DeserializationManager<ctxs...>*, char const * const v, context_ptr<T>){
 		using T2 = std::decay_t<T>;
 		return context_ptr<const T2>{(const T2*)v};
