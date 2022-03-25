@@ -265,7 +265,7 @@ namespace mutils{
      * via repeated calls to the function
      */
 	template<typename F, typename BR, typename... Args>
-	std::enable_if_t<std::is_pod<BR>::value>
+	std::enable_if_t<std::is_trivial<BR>::value>
 	post_object(const F& f, const BR& br, Args&&... args){
 		f(std::forward<Args>(args)...,(char*)&br,sizeof(BR));
 	}
@@ -629,7 +629,7 @@ namespace mutils{
 	}
 
 	//Templates that become true_type when matched to the thing they identify,
-	//or become false_type if they fail to match, similar to std::is_pod
+	//or become false_type if they fail to match, similar to std::is_trivial
 
 	template<typename>
 	struct is_pair : std::false_type {};
@@ -758,7 +758,7 @@ namespace mutils{
 		v += typenonce_size;
 #endif
 
-		if (std::is_pod<member>::value && !std::is_same<bool,member>::value){
+		if (std::is_trivial<member>::value && !std::is_same<bool,member>::value){
 			member const * const start = (member*) (v + sizeof(int));
 			const int size = ((int*)v)[0];
 			return std::unique_ptr<T>{new T{start, start + size}};
